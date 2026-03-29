@@ -1,0 +1,118 @@
+# =============================================================================
+# 基于区块链的医用耗材供应链管理系统 - 加密材料配置文件
+# 功能: 定义PKI证书颁发机构的配置，用于生成MSP身份证书和TLS证书
+# =============================================================================
+
+# =============================================================================
+# 排序组织配置 (Orderer Organization)
+# =============================================================================
+OrdererOrgs:
+  - Name: Orderer
+    Domain: supplychain.com
+    # 生成的证书将包含: Orderer.supplychain.com
+    Specs:
+      - Hostname: orderer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer1.supplychain.com
+      - Hostname: orderer2
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer2.supplychain.com
+      - Hostname: orderer3
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - orderer3.supplychain.com
+
+# =============================================================================
+# 对等节点组织配置 (Peer Organizations)
+# =============================================================================
+PeerOrgs:
+  # ---------------------------------------------------------------------------
+  # 生产商组织 (Producer Organization)
+  # 角色: 负责医用耗材的生产、赋码与源头数据上链
+  # ---------------------------------------------------------------------------
+  - Name: Producer
+    Domain: producer.supplychain.com
+    EnableNodeOUs: true  # 启用节点组织单元，区分client/admin/peer等角色
+    # 生成2个Peer节点的证书
+    Specs:
+      - Hostname: peer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer0.producer.supplychain.com
+      - Hostname: peer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer1.producer.supplychain.com
+    # 用户证书配置
+    Users:
+      Count: 1  # 生成1个普通用户证书(Admin用户自动生成)
+
+  # ---------------------------------------------------------------------------
+  # 经销商组织 (Distributor Organization)
+  # 角色: 负责医用耗材的物流中转、仓储管理与环境监控
+  # ---------------------------------------------------------------------------
+  - Name: Distributor
+    Domain: distributor.supplychain.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer0.distributor.supplychain.com
+      - Hostname: peer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer1.distributor.supplychain.com
+    Users:
+      Count: 1
+
+  # ---------------------------------------------------------------------------
+  # 医院组织 (Hospital Organization)
+  # 角色: 负责医用耗材的入库验收、库存管理与临床消耗核销
+  # ---------------------------------------------------------------------------
+  - Name: Hospital
+    Domain: hospital.supplychain.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer0.hospital.supplychain.com
+      - Hostname: peer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer1.hospital.supplychain.com
+    Users:
+      Count: 1
+
+  # ---------------------------------------------------------------------------
+  # 监管机构 (Regulator Organization)
+  # 角色: 拥有全局审计权限，负责全链路追溯与合规性检查
+  # ---------------------------------------------------------------------------
+  - Name: Regulator
+    Domain: regulator.supplychain.com
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: peer0
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer0.regulator.supplychain.com
+      - Hostname: peer1
+        SANS:
+          - localhost
+          - 127.0.0.1
+          - peer1.regulator.supplychain.com
+    Users:
+      Count: 1

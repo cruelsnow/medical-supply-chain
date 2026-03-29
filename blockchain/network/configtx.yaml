@@ -1,0 +1,260 @@
+# =============================================================================
+# 基于区块链的医用耗材供应链管理系统 - 通道配置文件
+# 功能: 定义Hyperledger Fabric网络的组织结构、通道策略和共识配置
+# =============================================================================
+
+# =============================================================================
+# 基础配置 (Organizations, Orderer, Application)
+# =============================================================================
+Organizations:
+  # ---------------------------------------------------------------------------
+  # 排序组织定义 (Orderer Organization)
+  # ---------------------------------------------------------------------------
+  - &OrdererOrg
+    Name: OrdererMSP
+    ID: OrdererMSP
+    MSPDir: crypto-config/ordererOrganizations/supplychain.com/msp
+    # 定义该组织的策略
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer1.supplychain.com:7050
+      - orderer2.supplychain.com:8050
+      - orderer3.supplychain.com:9050
+
+  # ---------------------------------------------------------------------------
+  # 生产商组织 (Producer Organization)
+  # 职责: 医用耗材生产、UDI赋码、源头数据上链
+  # ---------------------------------------------------------------------------
+  - &ProducerOrg
+    Name: ProducerMSP
+    ID: ProducerMSP
+    MSPDir: crypto-config/peerOrganizations/producer.supplychain.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin', 'ProducerMSP.peer', 'ProducerMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin', 'ProducerMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('ProducerMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('ProducerMSP.peer')"
+    # 节点组织单元配置
+    AnchorPeers:
+      - Host: peer0.producer.supplychain.com
+        Port: 7051
+
+  # ---------------------------------------------------------------------------
+  # 经销商组织 (Distributor Organization)
+  # 职责: 物流中转、仓储管理、环境监控数据上链
+  # ---------------------------------------------------------------------------
+  - &DistributorOrg
+    Name: DistributorMSP
+    ID: DistributorMSP
+    MSPDir: crypto-config/peerOrganizations/distributor.supplychain.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin', 'DistributorMSP.peer', 'DistributorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin', 'DistributorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('DistributorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('DistributorMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.distributor.supplychain.com
+        Port: 7051
+
+  # ---------------------------------------------------------------------------
+  # 医院组织 (Hospital Organization)
+  # 职责: 入库验收、库存管理、临床消耗核销
+  # ---------------------------------------------------------------------------
+  - &HospitalOrg
+    Name: HospitalMSP
+    ID: HospitalMSP
+    MSPDir: crypto-config/peerOrganizations/hospital.supplychain.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('HospitalMSP.admin', 'HospitalMSP.peer', 'HospitalMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('HospitalMSP.admin', 'HospitalMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('HospitalMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('HospitalMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.hospital.supplychain.com
+        Port: 7051
+
+  # ---------------------------------------------------------------------------
+  # 监管机构 (Regulator Organization)
+  # 职责: 全链路追溯、合规审计、哈希校验
+  # ---------------------------------------------------------------------------
+  - &RegulatorOrg
+    Name: RegulatorMSP
+    ID: RegulatorMSP
+    MSPDir: crypto-config/peerOrganizations/regulator.supplychain.com/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.peer', 'RegulatorMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin', 'RegulatorMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('RegulatorMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.regulator.supplychain.com
+        Port: 7051
+
+# =============================================================================
+# 排序服务配置 (Orderer Configuration)
+# 使用Raft共识机制，支持崩溃容错
+# =============================================================================
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_0: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Endorsement"
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer1.supplychain.com:7050
+    - orderer2.supplychain.com:8050
+    - orderer3.supplychain.com:9050
+  # 批处理配置 - 控制区块生成频率和大小
+  BatchTimeout: 2s
+  BatchSize:
+    MaxMessageCount: 50
+    AbsoluteMaxBytes: 99 MB
+    PreferredMaxBytes: 512 KB
+  # 组织列表
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+# =============================================================================
+# 配置文件定义 (Profiles)
+# =============================================================================
+
+Profiles:
+  # ---------------------------------------------------------------------------
+  # 创世区块配置 - 用于启动排序服务
+  # ---------------------------------------------------------------------------
+  SupplyChainGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+      Capabilities:
+        <<: *OrdererCapabilities
+      # Raft共识配置
+      EtcdRaft:
+        Consenters:
+          - Host: orderer1.supplychain.com
+            Port: 7050
+            ClientTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/tls/server.crt
+            ServerTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/tls/server.crt
+          - Host: orderer2.supplychain.com
+            Port: 8050
+            ClientTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer2.supplychain.com/tls/server.crt
+            ServerTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer2.supplychain.com/tls/server.crt
+          - Host: orderer3.supplychain.com
+            Port: 9050
+            ClientTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer3.supplychain.com/tls/server.crt
+            ServerTLSCert: crypto-config/ordererOrganizations/supplychain.com/orderers/orderer3.supplychain.com/tls/server.crt
+    Consortiums:
+      SupplyChainConsortium:
+        Organizations:
+          - *ProducerOrg
+          - *DistributorOrg
+          - *HospitalOrg
+          - *RegulatorOrg
+
+  # ---------------------------------------------------------------------------
+  # 通道配置 - 创建应用通道时使用
+  # ---------------------------------------------------------------------------
+  SupplyChainChannel:
+    Consortium: SupplyChainConsortium
+    <<: *ChannelDefaults
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *ProducerOrg
+        - *DistributorOrg
+        - *HospitalOrg
+        - *RegulatorOrg
+      Capabilities:
+        <<: *ApplicationCapabilities

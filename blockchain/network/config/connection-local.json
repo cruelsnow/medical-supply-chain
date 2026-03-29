@@ -1,0 +1,127 @@
+{
+  "name": "medical-supply-chain-network",
+  "version": "1.0.0",
+  "client": {
+    "organization": "Producer",
+    "connection": {
+      "timeout": {
+        "peer": {
+          "endorser": "300"
+        },
+        "orderer": "300"
+      }
+    }
+  },
+  "organizations": {
+    "Producer": {
+      "mspid": "ProducerMSP",
+      "peers": [
+        "peer0.producer.supplychain.com"
+      ]
+    },
+    "Distributor": {
+      "mspid": "DistributorMSP",
+      "peers": [
+        "peer0.distributor.supplychain.com"
+      ]
+    },
+    "Hospital": {
+      "mspid": "HospitalMSP",
+      "peers": [
+        "peer0.hospital.supplychain.com"
+      ]
+    },
+    "Regulator": {
+      "mspid": "RegulatorMSP",
+      "peers": [
+        "peer0.regulator.supplychain.com"
+      ]
+    }
+  },
+  "peers": {
+    "peer0.producer.supplychain.com": {
+      "url": "grpcs://localhost:7051",
+      "tlsCACerts": {
+        "path": "../crypto-config/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.producer.supplychain.com",
+        "hostnameOverride": "peer0.producer.supplychain.com"
+      }
+    },
+    "peer0.distributor.supplychain.com": {
+      "url": "grpcs://localhost:7251",
+      "tlsCACerts": {
+        "path": "../crypto-config/peerOrganizations/distributor.supplychain.com/peers/peer0.distributor.supplychain.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.distributor.supplychain.com",
+        "hostnameOverride": "peer0.distributor.supplychain.com"
+      }
+    },
+    "peer0.hospital.supplychain.com": {
+      "url": "grpcs://localhost:7451",
+      "tlsCACerts": {
+        "path": "../crypto-config/peerOrganizations/hospital.supplychain.com/peers/peer0.hospital.supplychain.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.hospital.supplychain.com",
+        "hostnameOverride": "peer0.hospital.supplychain.com"
+      }
+    },
+    "peer0.regulator.supplychain.com": {
+      "url": "grpcs://localhost:7651",
+      "tlsCACerts": {
+        "path": "../crypto-config/peerOrganizations/regulator.supplychain.com/peers/peer0.regulator.supplychain.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "peer0.regulator.supplychain.com",
+        "hostnameOverride": "peer0.regulator.supplychain.com"
+      }
+    }
+  },
+  "orderers": {
+    "orderer1.supplychain.com": {
+      "url": "grpcs://localhost:7050",
+      "tlsCACerts": {
+        "path": "../crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/tls/ca.crt"
+      },
+      "grpcOptions": {
+        "ssl-target-name-override": "orderer1.supplychain.com"
+      }
+    }
+  },
+  "channels": {
+    "supplychain-channel": {
+      "orderers": [
+        "orderer1.supplychain.com"
+      ],
+      "peers": {
+        "peer0.producer.supplychain.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "eventSource": true
+        },
+        "peer0.distributor.supplychain.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "eventSource": true
+        },
+        "peer0.hospital.supplychain.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "eventSource": true
+        },
+        "peer0.regulator.supplychain.com": {
+          "endorsingPeer": true,
+          "chaincodeQuery": true,
+          "ledgerQuery": true,
+          "eventSource": true
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# 依赖包
+node_modules/
+/frontend/node_modules/
+/backend/node_modules/
+
+# 生产构建产物
+dist/
+build/
+
+# 环境变量与密钥 (不要把包含真实密码的 .env 传上去)
+.env
+.env.local
+
+# Fabric 区块链运行产生的数据卷和证书材料
+/network/crypto-config/
+/network/channel-artifacts/
+/network/data/

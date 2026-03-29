@@ -1,0 +1,625 @@
+# =============================================================================
+# 基于区块链的医用耗材供应链管理系统 - Docker Compose 配置文件
+# 功能: 定义Hyperledger Fabric联盟链网络的容器编排
+# 包含: 4个组织(Producer/Distributor/Hospital/Regulator) + 3个Orderer节点
+# =============================================================================
+
+version: '2.0'
+
+volumes:
+  # 排序节点数据卷
+  orderer1.supplychain.com:
+  orderer2.supplychain.com:
+  orderer3.supplychain.com:
+
+  # 生产商组织Peer节点数据卷
+  peer0.producer.supplychain.com:
+  peer1.producer.supplychain.com:
+
+  # 经销商组织Peer节点数据卷
+  peer0.distributor.supplychain.com:
+  peer1.distributor.supplychain.com:
+
+  # 医院组织Peer节点数据卷
+  peer0.hospital.supplychain.com:
+  peer1.hospital.supplychain.com:
+
+  # 监管机构Peer节点数据卷
+  peer0.regulator.supplychain.com:
+  peer1.regulator.supplychain.com:
+
+networks:
+  supplychain-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.25.0.0/24
+
+services:
+  # ===========================================================================
+  # 排序服务节点 (Orderer) - 使用Raft共识机制
+  # ===========================================================================
+  orderer1.supplychain.com:
+    container_name: orderer1.supplychain.com
+    image: hyperledger/fabric-orderer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=7050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      # TLS配置 - 启用双向TLS认证
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./config/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/tls:/var/hyperledger/orderer/tls
+      - orderer1.supplychain.com:/var/hyperledger/production/orderer
+    ports:
+      - 7050:7050
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.11
+
+  orderer2.supplychain.com:
+    container_name: orderer2.supplychain.com
+    image: hyperledger/fabric-orderer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=8050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./config/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer2.supplychain.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer2.supplychain.com/tls:/var/hyperledger/orderer/tls
+      - orderer2.supplychain.com:/var/hyperledger/production/orderer
+    ports:
+      - 8050:8050
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.12
+
+  orderer3.supplychain.com:
+    container_name: orderer3.supplychain.com
+    image: hyperledger/fabric-orderer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - ORDERER_GENERAL_LISTENADDRESS=0.0.0.0
+      - ORDERER_GENERAL_LISTENPORT=9050
+      - ORDERER_GENERAL_GENESISMETHOD=file
+      - ORDERER_GENERAL_GENESISFILE=/var/hyperledger/orderer/orderer.genesis.block
+      - ORDERER_GENERAL_LOCALMSPID=OrdererMSP
+      - ORDERER_GENERAL_LOCALMSPDIR=/var/hyperledger/orderer/msp
+      - ORDERER_GENERAL_TLS_ENABLED=true
+      - ORDERER_GENERAL_TLS_PRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_TLS_CERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_TLS_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+      - ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE=/var/hyperledger/orderer/tls/server.crt
+      - ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY=/var/hyperledger/orderer/tls/server.key
+      - ORDERER_GENERAL_CLUSTER_ROOTCAS=[/var/hyperledger/orderer/tls/ca.crt]
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric
+    command: orderer
+    volumes:
+      - ./config/genesis.block:/var/hyperledger/orderer/orderer.genesis.block
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer3.supplychain.com/msp:/var/hyperledger/orderer/msp
+      - ./crypto-config/ordererOrganizations/supplychain.com/orderers/orderer3.supplychain.com/tls:/var/hyperledger/orderer/tls
+      - orderer3.supplychain.com:/var/hyperledger/production/orderer
+    ports:
+      - 9050:9050
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.13
+
+  # ===========================================================================
+  # 生产商组织 (Producer Organization) - 负责耗材生产与源头赋码
+  # ===========================================================================
+  peer0.producer.supplychain.com:
+    container_name: peer0.producer.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.producer.supplychain.com
+      - CORE_PEER_ADDRESS=peer0.producer.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.producer.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.producer.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.producer.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=ProducerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      # CouchDB作为状态数据库，支持富查询
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.producer:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      # 操作服务配置
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.producer.supplychain.com:9443
+      - CORE_METRICS_PROVIDER=prometheus
+      # Chaincode container network config
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      # Go proxy for chaincode build
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.producer.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7051:7051
+      - 7052:7052
+    depends_on:
+      - couchdb0.producer
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.21
+
+  peer1.producer.supplychain.com:
+    container_name: peer1.producer.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.producer.supplychain.com
+      - CORE_PEER_ADDRESS=peer1.producer.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.producer.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.producer.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.producer.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=ProducerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.producer:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.producer.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/producer.supplychain.com/peers/peer1.producer.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/producer.supplychain.com/peers/peer1.producer.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer1.producer.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7151:7051
+      - 7152:7052
+    depends_on:
+      - couchdb1.producer
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.22
+
+  # 生产商组织的CouchDB数据库
+  couchdb0.producer:
+    container_name: couchdb0.producer
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 5984:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.31
+
+  couchdb1.producer:
+    container_name: couchdb1.producer
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 5985:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.32
+
+  # ===========================================================================
+  # 经销商组织 (Distributor Organization) - 负责物流中转与仓储管理
+  # ===========================================================================
+  peer0.distributor.supplychain.com:
+    container_name: peer0.distributor.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.distributor.supplychain.com
+      - CORE_PEER_ADDRESS=peer0.distributor.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.distributor.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.distributor.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.distributor.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=DistributorMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.distributor:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.distributor.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/distributor.supplychain.com/peers/peer0.distributor.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/distributor.supplychain.com/peers/peer0.distributor.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.distributor.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7251:7051
+      - 7252:7052
+    depends_on:
+      - couchdb0.distributor
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.41
+
+  peer1.distributor.supplychain.com:
+    container_name: peer1.distributor.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.distributor.supplychain.com
+      - CORE_PEER_ADDRESS=peer1.distributor.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.distributor.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.distributor.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.distributor.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=DistributorMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.distributor:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.distributor.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/distributor.supplychain.com/peers/peer1.distributor.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/distributor.supplychain.com/peers/peer1.distributor.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer1.distributor.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7351:7051
+      - 7352:7052
+    depends_on:
+      - couchdb1.distributor
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.42
+
+  couchdb0.distributor:
+    container_name: couchdb0.distributor
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 6984:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.51
+
+  couchdb1.distributor:
+    container_name: couchdb1.distributor
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 6985:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.52
+
+  # ===========================================================================
+  # 医院组织 (Hospital Organization) - 负责入库验收与临床消耗
+  # ===========================================================================
+  peer0.hospital.supplychain.com:
+    container_name: peer0.hospital.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.hospital.supplychain.com
+      - CORE_PEER_ADDRESS=peer0.hospital.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.hospital.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.hospital.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.hospital.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=HospitalMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.hospital:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.hospital.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/hospital.supplychain.com/peers/peer0.hospital.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/hospital.supplychain.com/peers/peer0.hospital.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.hospital.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7451:7051
+      - 7452:7052
+    depends_on:
+      - couchdb0.hospital
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.61
+
+  peer1.hospital.supplychain.com:
+    container_name: peer1.hospital.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.hospital.supplychain.com
+      - CORE_PEER_ADDRESS=peer1.hospital.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.hospital.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.hospital.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.hospital.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=HospitalMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.hospital:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.hospital.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/hospital.supplychain.com/peers/peer1.hospital.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/hospital.supplychain.com/peers/peer1.hospital.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer1.hospital.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7551:7051
+      - 7552:7052
+    depends_on:
+      - couchdb1.hospital
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.62
+
+  couchdb0.hospital:
+    container_name: couchdb0.hospital
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 7984:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.71
+
+  couchdb1.hospital:
+    container_name: couchdb1.hospital
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 7985:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.72
+
+  # ===========================================================================
+  # 监管机构 (Regulator Organization) - 拥有全局审计权限
+  # ===========================================================================
+  peer0.regulator.supplychain.com:
+    container_name: peer0.regulator.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer0.regulator.supplychain.com
+      - CORE_PEER_ADDRESS=peer0.regulator.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer0.regulator.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer1.regulator.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer0.regulator.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=RegulatorMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb0.regulator:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer0.regulator.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/regulator.supplychain.com/peers/peer0.regulator.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/regulator.supplychain.com/peers/peer0.regulator.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer0.regulator.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7651:7051
+      - 7652:7052
+    depends_on:
+      - couchdb0.regulator
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.81
+
+  peer1.regulator.supplychain.com:
+    container_name: peer1.regulator.supplychain.com
+    image: hyperledger/fabric-peer:2.2
+    platform: linux/amd64
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=peer1.regulator.supplychain.com
+      - CORE_PEER_ADDRESS=peer1.regulator.supplychain.com:7051
+      - CORE_PEER_LISTENADDRESS=0.0.0.0:7051
+      - CORE_PEER_CHAINCODEADDRESS=peer1.regulator.supplychain.com:7052
+      - CORE_PEER_CHAINCODELISTENADDRESS=0.0.0.0:7052
+      - CORE_PEER_GOSSIP_BOOTSTRAP=peer0.regulator.supplychain.com:7051
+      - CORE_PEER_GOSSIP_EXTERNALENDPOINT=peer1.regulator.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=RegulatorMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/etc/hyperledger/fabric/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/etc/hyperledger/fabric/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/etc/hyperledger/fabric/tls/ca.crt
+      - CORE_LEDGER_STATE_STATEDATABASE=CouchDB
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS=couchdb1.regulator:5984
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME=admin
+      - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
+      - CORE_OPERATIONS_LISTENADDRESS=peer1.regulator.supplychain.com:9443
+      - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
+      - GOPROXY=https://goproxy.cn,direct
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: peer node start
+    volumes:
+      - ./crypto-config/peerOrganizations/regulator.supplychain.com/peers/peer1.regulator.supplychain.com/msp:/etc/hyperledger/fabric/msp
+      - ./crypto-config/peerOrganizations/regulator.supplychain.com/peers/peer1.regulator.supplychain.com/tls:/etc/hyperledger/fabric/tls
+      - peer1.regulator.supplychain.com:/var/hyperledger/production
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - 7751:7051
+      - 7752:7052
+    depends_on:
+      - couchdb1.regulator
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.82
+
+  couchdb0.regulator:
+    container_name: couchdb0.regulator
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 8984:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.91
+
+  couchdb1.regulator:
+    container_name: couchdb1.regulator
+    image: hyperledger/fabric-couchdb:0.4.18
+    platform: linux/amd64
+    environment:
+      - COUCHDB_USER=admin
+      - COUCHDB_PASSWORD=adminpw
+    ports:
+      - 8985:5984
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.92
+
+  # ===========================================================================
+  # CLI工具容器 - 用于管理操作
+  # ===========================================================================
+  cli:
+    container_name: cli
+    image: hyperledger/fabric-tools:2.2
+    platform: linux/amd64
+    tty: true
+    stdin_open: true
+    environment:
+      - FABRIC_LOGGING_SPEC=INFO
+      - CORE_PEER_ID=cli
+      - CORE_PEER_ADDRESS=peer0.producer.supplychain.com:7051
+      - CORE_PEER_LOCALMSPID=ProducerMSP
+      - CORE_PEER_TLS_ENABLED=true
+      - CORE_PEER_TLS_CERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/tls/server.crt
+      - CORE_PEER_TLS_KEY_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/tls/server.key
+      - CORE_PEER_TLS_ROOTCERT_FILE=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/producer.supplychain.com/peers/peer0.producer.supplychain.com/tls/ca.crt
+      - CORE_PEER_MSPCONFIGPATH=/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/peerOrganizations/producer.supplychain.com/users/Admin@producer.supplychain.com/msp
+    working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
+    command: /bin/bash
+    volumes:
+      - ..:/opt/gopath/src/github.com/hyperledger/fabric/peer/blockchain
+      - ./crypto-config:/opt/gopath/src/github.com/hyperledger/fabric/peer/crypto
+      - ./config:/opt/gopath/src/github.com/hyperledger/fabric/peer/config
+      - ../chaincode:/opt/gopath/src/github.com/hyperledger/fabric/peer/chaincode
+    depends_on:
+      - orderer1.supplychain.com
+      - orderer2.supplychain.com
+      - orderer3.supplychain.com
+      - peer0.producer.supplychain.com
+      - peer0.distributor.supplychain.com
+      - peer0.hospital.supplychain.com
+      - peer0.regulator.supplychain.com
+    networks:
+      supplychain-network:
+        ipv4_address: 172.25.0.100
