@@ -4,36 +4,32 @@
 // 功能: SQLite 数据库初始化与连接管理
 // =============================================================================
 
-import { Sequelize } from 'sequelize';
-import path from 'path';
-import fs from 'fs';
+// 先导入 sequelize 实例（在 database.ts 中创建，避免循环依赖）
+export { sequelize } from './database';
+export { default } from './database';
+
+import { sequelize } from './database';
 import { config } from '../config';
 
-// 数据库文件存储路径
-const dataDir = path.join(__dirname, '../../data');
-const dbPath = path.join(dataDir, 'database.sqlite');
+// 导入所有模型（触发 Model.init() 注册）
+import './user.model';
+import './order.model';
+import './order-item.model';
+import './alert.model';
+import './alert-rule.model';
 
-// 确保 data 目录存在
-if (!fs.existsSync(dataDir)) {
-  fs.mkdirSync(dataDir, { recursive: true });
-}
-
-// 创建 Sequelize 实例
-export const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: dbPath,
-  logging: config.server.env === 'development' ? console.log : false,
-  define: {
-    timestamps: true,
-    underscored: true,
-  },
-});
+// 导入模型类用于关联配置
+import { Order } from './order.model';
+import { OrderItem } from './order-item.model';
 
 // 测试数据库连接
 export const connectDB = async (): Promise<void> => {
   try {
     await sequelize.authenticate();
     console.log('✅ SQLite 数据库连接成功');
+
+    // 设置模型关联关系
+    setupAssociations();
 
     // 同步模型到数据库（开发环境自动创建表）
     await sequelize.sync({ alter: config.server.env === 'development' });
@@ -44,6 +40,23 @@ export const connectDB = async (): Promise<void> => {
   }
 };
 
+// =============================================================================
+// 模型关联关系配置
+// =============================================================================
+
+function setupAssociations(): void {
+  // Order -> OrderItem：一对多
+  Order.hasMany(OrderItem, {
+    foreignKey: 'orderId',
+    as: 'items',
+    onDelete: 'CASCADE',
+  });
+  OrderItem.belongsTo(Order, {
+    foreignKey: 'orderId',
+    as: 'order',
+  });
+}
+
 // 关闭数据库连接
 export const closeDB = async (): Promise<void> => {
   try {
@@ -53,5 +66,3 @@ export const closeDB = async (): Promise<void> => {
     console.error('关闭数据库连接失败:', error);
   }
 };
-
-export default sequelize;

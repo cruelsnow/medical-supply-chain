@@ -285,4 +285,75 @@ export const traceApi = {
   hash: (content: string) => request.post('/trace/hash', { content }),
 }
 
+// 订单相关
+export const orderApi = {
+  // 创建订单
+  create: (data: any) => request.post('/order', data),
+
+  // 订单列表
+  list: (params?: any) => request.get('/order', { params }),
+
+  // 订单详情
+  detail: (id: string) => request.get(`/order/${id}`),
+
+  // 经销商确认
+  confirm: (id: string, data?: any) => request.put(`/order/${id}/confirm`, data),
+
+  // 生产商确认
+  producerConfirm: (id: string, data?: any) => request.put(`/order/${id}/producer-confirm`, data),
+
+  // 标记待发货
+  readyToShip: (id: string, data?: any) => request.put(`/order/${id}/ready-to-ship`, data),
+
+  // 发货
+  dispatch: (id: string, data: { shippingId: string; dispatchItems?: { itemId: string; udi: string }[] }) =>
+    request.put(`/order/${id}/dispatch`, data),
+
+  // 确认送达
+  deliver: (id: string) => request.put(`/order/${id}/deliver`),
+
+  // 医院验收
+  accept: (id: string) => request.put(`/order/${id}/accept`),
+
+  // 完成订单
+  complete: (id: string) => request.put(`/order/${id}/complete`),
+
+  // 取消订单
+  cancel: (id: string, data?: any) => request.put(`/order/${id}/cancel`, data),
+
+  // 拒绝订单
+  reject: (id: string, data: { rejectReason: string }) =>
+    request.put(`/order/${id}/reject`, data),
+
+  // 订单统计
+  stats: () => request.get('/order/stats/overview'),
+}
+
+// 告警相关
+export const alertApi = {
+  // 告警列表
+  list: (params?: any) => request.get('/alert', { params }),
+
+  // 告警详情
+  detail: (id: string) => request.get(`/alert/${id}`),
+
+  // 确认告警
+  acknowledge: (id: string) => request.put(`/alert/${id}/acknowledge`),
+
+  // 解决告警
+  resolve: (id: string) => request.put(`/alert/${id}/resolve`),
+
+  // 手动触发检查
+  check: () => request.post('/alert/check'),
+
+  // 告警规则列表
+  rules: () => request.get('/alert/rules'),
+
+  // 更新告警规则
+  updateRule: (id: string, data: any) => request.put(`/alert/rules/${id}`, data),
+
+  // 告警统计
+  stats: () => request.get('/alert/stats'),
+}
+
 export default service

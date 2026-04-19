@@ -90,9 +90,10 @@ export const config = {
     allowedTypes: ['application/pdf', 'image/jpeg', 'image/png'],
   },
 
-  // 模拟模式配置（开发时使用，避免连接区块链）
+  // 模拟模式配置（区块链网络不可用时作为兜底）
+  // 默认走真实区块链网络，仅在 MOCK_MODE=true 时使用模拟数据
   mockMode: {
-    enabled: process.env.MOCK_MODE === 'true' || process.env.NODE_ENV === 'development',
+    enabled: process.env.MOCK_MODE === 'true',
     responseDelay: parseInt(process.env.MOCK_DELAY || '100', 10), // 模拟延迟100ms
   },
 };

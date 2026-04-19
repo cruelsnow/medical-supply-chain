@@ -25,7 +25,7 @@ router.post(
       const params = ctx.validatedData as ReceiptParams;
 
       // 设置经销商/物流组织上下文
-      assetService.setContext('distributor', ctx.user?.walletId || '2');
+      assetService.setContext('distributor', ctx.user?.walletId || '1');
 
       const result = await assetService.confirmReceipt(params);
 
@@ -66,7 +66,7 @@ router.post(
       const params = ctx.validatedData as EnvDataParams;
 
       // 只有经销商/物流可以更新环境数据
-      assetService.setContext('distributor', ctx.user?.walletId || '2');
+      assetService.setContext('distributor', ctx.user?.walletId || '1');
 
       const result = await assetService.updateEnvData(params);
 
@@ -102,7 +102,7 @@ router.get(
   '/transit',
   async (ctx: Context) => {
     try {
-      assetService.setContext('distributor', ctx.user?.walletId || '2');
+      assetService.setContext('distributor', ctx.user?.walletId || '1');
 
       const result = await assetService.queryByStatus('IN_TRANSIT');
 
@@ -128,7 +128,7 @@ router.get(
   '/abnormal',
   async (ctx: Context) => {
     try {
-      assetService.setContext('distributor', ctx.user?.walletId || '2');
+      assetService.setContext('distributor', ctx.user?.walletId || '1');
 
       const result = await assetService.queryByStatus('EXCEPTION');
 

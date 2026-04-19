@@ -317,7 +317,7 @@ router.post(
       const params = ctx.validatedData;
 
       // 只有医院可以核销
-      const walletId = ctx.user?.walletId || '3';
+      const walletId = ctx.user?.walletId || '1';
       assetService.setContext('hospital', walletId);
 
       const result = await assetService.burnAsset(params);

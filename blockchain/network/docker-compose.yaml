@@ -165,10 +165,8 @@ services:
       # 操作服务配置
       - CORE_OPERATIONS_LISTENADDRESS=peer0.producer.supplychain.com:9443
       - CORE_METRICS_PROVIDER=prometheus
-      # Chaincode container network config
+      # 链码容器网络配置
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      # Go proxy for chaincode build
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -209,7 +207,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer1.producer.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -280,7 +277,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer0.distributor.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -321,7 +317,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer1.distributor.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -391,7 +386,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer0.hospital.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -432,7 +426,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer1.hospital.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -502,7 +495,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer0.regulator.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:
@@ -543,7 +535,6 @@ services:
       - CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD=adminpw
       - CORE_OPERATIONS_LISTENADDRESS=peer1.regulator.supplychain.com:9443
       - CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE=network_supplychain-network
-      - GOPROXY=https://goproxy.cn,direct
     working_dir: /opt/gopath/src/github.com/hyperledger/fabric/peer
     command: peer node start
     volumes:

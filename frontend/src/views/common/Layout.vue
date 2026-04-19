@@ -31,12 +31,12 @@
           <el-menu-item v-if="canAccessMenu('producer_init')" index="/producer/init">
             资产登记
           </el-menu-item>
-          <!-- 发货管理 - 仅 operator/admin 可见 -->
-          <el-menu-item v-if="canAccessMenu('producer_ship')" index="/producer/ship">
-            发货管理
-          </el-menu-item>
           <!-- 资产列表 - 所有角色可见 -->
           <el-menu-item index="/producer/list">资产列表</el-menu-item>
+          <!-- 订单管理 - 仅 operator/admin 可见 -->
+          <el-menu-item v-if="canAccessMenu('producer_orders')" index="/producer/orders">
+            订单管理
+          </el-menu-item>
         </el-sub-menu>
 
         <!-- 经销商/物流菜单 -->
@@ -45,17 +45,9 @@
             <el-icon><Truck /></el-icon>
             <span>物流管理</span>
           </template>
-          <!-- 收货确认 - 仅 operator/admin 可见 -->
-          <el-menu-item v-if="canAccessMenu('distributor_receive')" index="/distributor/receive">
-            收货确认
-          </el-menu-item>
-          <!-- 发货管理 - 仅 operator/admin 可见 -->
-          <el-menu-item v-if="canAccessMenu('distributor_ship')" index="/distributor/ship">
-            发货管理
-          </el-menu-item>
-          <!-- 环境监控 - 仅 operator/admin 可见 -->
-          <el-menu-item v-if="canAccessMenu('distributor_env')" index="/distributor/env-monitor">
-            环境监控
+          <!-- 订单管理 - 仅 operator/admin 可见 -->
+          <el-menu-item v-if="canAccessMenu('distributor_orders')" index="/distributor/orders">
+            订单管理
           </el-menu-item>
         </el-sub-menu>
 
@@ -65,9 +57,9 @@
             <el-icon><FirstAidKit /></el-icon>
             <span>医院管理</span>
           </template>
-          <!-- 验收入库 - 仅 operator/admin 可见 -->
-          <el-menu-item v-if="canAccessMenu('hospital_inbound')" index="/hospital/inbound">
-            验收入库
+          <!-- 采购订单 - 仅 operator/admin 可见 -->
+          <el-menu-item v-if="canAccessMenu('hospital_orders')" index="/hospital/orders">
+            采购订单
           </el-menu-item>
           <!-- 库存管理 - 所有角色可见 -->
           <el-menu-item index="/hospital/inventory">库存管理</el-menu-item>
@@ -86,15 +78,10 @@
           <el-menu-item index="/regulator/trace">全链追溯</el-menu-item>
           <el-menu-item index="/regulator/verify">哈希校验</el-menu-item>
           <el-menu-item index="/regulator/stats">数据统计</el-menu-item>
-        </el-sub-menu>
-
-        <!-- 系统管理菜单（仅管理员可见） -->
-        <el-sub-menu v-if="isAdmin" index="admin">
-          <template #title>
-            <el-icon><Setting /></el-icon>
-            <span>系统管理</span>
-          </template>
-          <el-menu-item index="/admin/users">用户管理</el-menu-item>
+          <el-menu-item index="/regulator/order-audit">订单审计</el-menu-item>
+          <el-menu-item index="/regulator/alerts">告警中心</el-menu-item>
+          <!-- 用户管理 - 仅 admin 可见 -->
+          <el-menu-item v-if="isAdmin" index="/admin/users">用户管理</el-menu-item>
         </el-sub-menu>
       </el-menu>
     </el-aside>

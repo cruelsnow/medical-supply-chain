@@ -22,6 +22,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/hyperledger/fabric-contract-api-go/contractapi"
@@ -52,6 +53,7 @@ type MedicalAsset struct {
 	Name           string `json:"name"`           // 耗材名称
 	Specification  string `json:"specification"`  // 规格型号
 	BatchNumber    string `json:"batchNumber"`    // 批次号
+	Quantity       int    `json:"quantity"`       // 生产数量
 	ProductionDate string `json:"productionDate"` // 生产日期 (格式: YYYY-MM-DD)
 	ExpiryDate     string `json:"expiryDate"`     // 有效期 (格式: YYYY-MM-DD)
 	DocHash        string `json:"docHash"`        // 质检报告哈希 (SHA-256)
@@ -226,6 +228,7 @@ func saveConsumeRecord(ctx contractapi.TransactionContextInterface, record *Cons
 //   - name: 耗材名称
 //   - specification: 规格型号
 //   - batchNumber: 批次号
+//   - quantity: 生产数量
 //   - productionDate: 生产日期
 //   - expiryDate: 有效期
 //   - docHash: 质检报告哈希
@@ -237,6 +240,7 @@ func (s *SupplyChainContract) InitAsset(
 	name string,
 	specification string,
 	batchNumber string,
+	quantity string,
 	productionDate string,
 	expiryDate string,
 	docHash string,
@@ -250,6 +254,12 @@ func (s *SupplyChainContract) InitAsset(
 
 	if mspID != "ProducerMSP" {
 		return nil, fmt.Errorf("only ProducerMSP can initialize assets, current MSP: %s", mspID)
+	}
+
+	// 验证数量参数
+	qty, err := strconv.Atoi(quantity)
+	if err != nil || qty < 1 {
+		return nil, fmt.Errorf("invalid quantity: %s, must be a positive integer", quantity)
 	}
 
 	// 检查资产是否已存在
@@ -273,6 +283,7 @@ func (s *SupplyChainContract) InitAsset(
 		Name:           name,
 		Specification:  specification,
 		BatchNumber:    batchNumber,
+		Quantity:       qty,
 		ProductionDate: productionDate,
 		ExpiryDate:     expiryDate,
 		DocHash:        docHash,

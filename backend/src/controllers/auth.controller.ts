@@ -77,6 +77,7 @@ router.post(
             name: user.name,
             orgName: user.orgName,
             role: user.role,
+            walletId: user.walletId,
           },
           expiresIn: config.jwt.expiresIn,
         },
@@ -186,11 +187,12 @@ router.post(
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // 根据组织确定钱包身份（共享身份方案）
+      // 每个组织有独立的 wallet 目录，同组织用户共享 '1' 身份
       const walletMap: Record<string, string> = {
         producer: '1',
-        distributor: '2',
-        hospital: '3',
-        regulator: '4',
+        distributor: '1',
+        hospital: '1',
+        regulator: '1',
       };
 
       // 创建新用户
@@ -227,28 +229,28 @@ router.post(
 );
 
 // =============================================================================
-// 获取用户列表（仅管理员）
+// 获取用户列表（仅监管机构管理员）
 // =============================================================================
 router.get(
   '/users',
   async (ctx: Context) => {
     try {
-      // 权限检查
-      if (!ctx.user || ctx.user.role !== 'admin') {
+      // 权限检查：仅监管机构管理员可访问用户列表
+      if (!ctx.user || ctx.user.role !== 'admin' || ctx.user.orgName !== 'regulator') {
         ctx.status = 403;
         ctx.body = {
           success: false,
-          error: '权限不足',
+          error: '权限不足，仅监管机构管理员可查看用户列表',
         };
         return;
       }
 
-      const { orgName, page = 1, pageSize = 20 } = ctx.query;
+      const { page = 1, pageSize = 20 } = ctx.query;
 
-      // 构建查询条件
+      // 监管端管理员可以查看所有组织的用户
       const where: any = {};
-      if (orgName) {
-        where.orgName = orgName;
+      if (ctx.user.orgName !== 'regulator') {
+        where.orgName = ctx.user.orgName;
       }
 
       // 分页查询
@@ -315,6 +317,13 @@ router.put(
           success: false,
           error: '用户不存在',
         };
+        return;
+      }
+
+      // 只能操作本组织用户（监管端可操作所有组织）
+      if (ctx.user.orgName !== 'regulator' && user.orgName !== ctx.user.orgName) {
+        ctx.status = 403;
+        ctx.body = { success: false, error: '无法操作其他组织的用户' };
         return;
       }
 
@@ -432,6 +441,7 @@ router.post(
           userId: ctx.user.userId,
           orgName: ctx.user.orgName,
           role: ctx.user.role,
+          walletId: ctx.user.walletId,
         },
         config.jwt.secret,
         {
@@ -526,6 +536,13 @@ router.put(
         return;
       }
 
+      // 只能操作本组织用户（监管端可操作所有组织）
+      if (ctx.user.orgName !== 'regulator' && user.orgName !== ctx.user.orgName) {
+        ctx.status = 403;
+        ctx.body = { success: false, error: '无法操作其他组织的用户' };
+        return;
+      }
+
       // 不能修改自己的角色
       if (user.id === ctx.user.userId && role && role !== user.role) {
         ctx.status = 400;
@@ -586,6 +603,13 @@ router.put(
         return;
       }
 
+      // 监管方可以操作所有组织用户，其他组织只能操作本组织
+      if (ctx.user.orgName !== 'regulator' && user.orgName !== ctx.user.orgName) {
+        ctx.status = 403;
+        ctx.body = { success: false, error: '无法操作其他组织的用户' };
+        return;
+      }
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       await user.update({ password: hashedPassword });
 
@@ -623,6 +647,13 @@ router.delete(
       if (!user) {
         ctx.status = 404;
         ctx.body = { success: false, error: '用户不存在' };
+        return;
+      }
+
+      // 监管方可以操作所有组织用户，其他组织只能操作本组织
+      if (ctx.user.orgName !== 'regulator' && user.orgName !== ctx.user.orgName) {
+        ctx.status = 403;
+        ctx.body = { success: false, error: '无法操作其他组织的用户' };
         return;
       }
 

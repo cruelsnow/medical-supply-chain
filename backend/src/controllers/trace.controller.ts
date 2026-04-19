@@ -22,7 +22,7 @@ router.get(
       const { udi } = ctx.params;
 
       // 监管机构有全局追溯权限
-      assetService.setContext('regulator', ctx.user?.walletId || '4');
+      assetService.setContext('regulator', ctx.user?.walletId || '1');
 
       // 获取资产当前状态
       const assetResult = await assetService.queryAsset(udi);
@@ -69,7 +69,7 @@ router.post(
     try {
       const { udi, docHash } = ctx.validatedData;
 
-      assetService.setContext('regulator', ctx.user?.walletId || '4');
+      assetService.setContext('regulator', ctx.user?.walletId || '1');
 
       // 先获取资产信息
       const assetResult = await assetService.queryAsset(udi);
@@ -135,7 +135,7 @@ router.post(
         return;
       }
 
-      assetService.setContext('regulator', ctx.user?.walletId || '4');
+      assetService.setContext('regulator', ctx.user?.walletId || '1');
 
       const results = [];
 
@@ -174,7 +174,7 @@ router.get(
   '/stats',
   async (ctx: Context) => {
     try {
-      assetService.setContext('regulator', ctx.user?.walletId || '4');
+      assetService.setContext('regulator', ctx.user?.walletId || '1');
 
       const countResult = await assetService.getAssetCount();
 

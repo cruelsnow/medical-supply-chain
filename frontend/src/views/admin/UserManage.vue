@@ -6,7 +6,7 @@
     <!-- 页面标题 -->
     <div class="page-header">
       <h2>用户管理</h2>
-      <el-button type="primary" @click="showCreateDialog">
+      <el-button type="primary" v-if="isAdmin" @click="showCreateDialog">
         <el-icon><Plus /></el-icon>
         创建用户
       </el-button>
@@ -81,23 +81,29 @@
         </el-table-column>
         <el-table-column label="操作" fixed="right" width="280">
           <template #default="{ row }">
-            <el-button size="small" @click="showEditDialog(row)">编辑</el-button>
-            <el-button size="small" @click="showResetPasswordDialog(row)">重置密码</el-button>
-            <el-button
-              size="small"
-              :type="row.status === 'active' ? 'warning' : 'success'"
-              @click="toggleStatus(row)"
-            >
-              {{ row.status === 'active' ? '禁用' : '启用' }}
-            </el-button>
-            <el-button
-              size="small"
-              type="danger"
-              @click="handleDelete(row)"
-              :disabled="row.role === 'admin'"
-            >
-              删除
-            </el-button>
+            <template v-if="isAdmin">
+              <el-button size="small" @click="showEditDialog(row)" :disabled="isSelf(row)">编辑</el-button>
+              <el-button size="small" @click="showResetPasswordDialog(row)" :disabled="isSelf(row)">重置密码</el-button>
+              <el-button
+                size="small"
+                :type="row.status === 'active' ? 'warning' : 'success'"
+                @click="toggleStatus(row)"
+                :disabled="isSelf(row)"
+              >
+                {{ row.status === 'active' ? '禁用' : '启用' }}
+              </el-button>
+              <el-button
+                size="small"
+                type="danger"
+                @click="handleDelete(row)"
+                :disabled="isSelf(row) || row.role === 'admin'"
+              >
+                删除
+              </el-button>
+            </template>
+            <template v-else>
+              <el-tag type="info" size="small">仅管理员可操作</el-tag>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -222,6 +228,15 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox, FormInstance } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { authApi } from '@/api'
+import { usePermission } from '@/composables/usePermission'
+
+// 权限检查 - 只有管理员才能操作
+const { isAdmin, user: currentUser } = usePermission()
+
+// 判断是否是当前用户自己
+const isSelf = (row: User) => {
+  return currentUser.value?.id === row.id
+}
 
 // =============================================================================
 // 类型定义

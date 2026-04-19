@@ -5,7 +5,7 @@
 // =============================================================================
 
 import { Model, DataTypes, Optional } from 'sequelize';
-import sequelize from './index';
+import { sequelize } from './database';
 
 // =============================================================================
 // 类型定义

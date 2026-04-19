@@ -25,7 +25,7 @@ router.post(
       const params = ctx.validatedData as ReceiptParams;
 
       // 设置医院组织上下文
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
       const result = await assetService.confirmReceipt(params);
 
@@ -63,18 +63,28 @@ router.get(
       const { status, batchNumber, keyword } = ctx.query as any;
 
       // 设置医院组织上下文
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
       let result;
 
       // 根据不同条件查询
       if (status) {
         result = await assetService.queryByStatus(status);
+        // 按状态查询时，也要过滤为仅本组织的资产
+        if (result.data) {
+          result.data = (result.data as any[]).filter((a: any) => a.owner === 'hospital');
+        }
       } else if (batchNumber) {
         result = await assetService.queryByBatch(batchNumber);
+        if (result.data) {
+          result.data = (result.data as any[]).filter((a: any) => a.owner === 'hospital');
+        }
       } else {
-        // 查询医院的所有在库资产
-        result = await assetService.queryByStatus('IN_STOCK');
+        // 默认：查询 owner 为 hospital 的所有资产（排除已消耗）
+        result = await assetService.queryByOwner('hospital');
+        if (result.data) {
+          result.data = (result.data as any[]).filter((a: any) => a.status !== 'CONSUMED');
+        }
       }
 
       ctx.body = {
@@ -102,7 +112,7 @@ router.get(
     try {
       const { udi } = ctx.params;
 
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
       const result = await assetService.queryAsset(udi);
 
@@ -141,7 +151,7 @@ router.post(
       const params = ctx.validatedData as BurnParams;
 
       // 只有医院可以核销
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
       const result = await assetService.burnAsset(params);
 
@@ -178,13 +188,16 @@ router.get(
     try {
       const days = parseInt((ctx.query.days as string) || '30', 10);
 
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
       const result = await assetService.queryExpiringSoon(days);
 
+      // 过滤为仅本医院的资产
+      const hospitalAssets = (result.data || []).filter((a: any) => a.owner === 'hospital');
+
       ctx.body = {
         success: true,
-        data: result.data || [],
+        data: hospitalAssets,
         total: (result.data as any[])?.length || 0,
         warningDays: days,
       };
@@ -207,13 +220,13 @@ router.get(
     try {
       const { startDate, endDate, department } = ctx.query as any;
 
-      assetService.setContext('hospital', ctx.user?.walletId || '3');
+      assetService.setContext('hospital', ctx.user?.walletId || '1');
 
-      // 查询已消耗的资产
+      // 查询已消耗的资产，只查本医院的
       const result = await assetService.queryByStatus('CONSUMED');
 
-      // 根据日期和科室过滤
-      let filteredData = result.data || [];
+      // 过滤为仅本医院消耗的资产
+      let filteredData = (result.data || []).filter((a: any) => a.owner === 'hospital');
 
       if (startDate || endDate) {
         filteredData = filteredData.filter((asset: any) => {

@@ -1,35 +1,36 @@
 #!/bin/bash
 # =============================================================================
-# Medical Supply Chain Blockchain System - Channel Creation Script
-# Function: Create application channel and join all peer nodes
+# 基于区块链的医用耗材供应链管理系统 - 通道创建脚本
+# 功能: 创建应用通道并让所有组织节点加入通道
 # =============================================================================
 
-# set -e  # Removed to allow continue on errors
+set -e
 
-# Color output
+# 颜色输出定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m'
 
-# Config
+# 配置变量
 CHANNEL_NAME="supplychain-channel"
 NETWORK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_DIR="${NETWORK_DIR}/config"
 
-# TLS cert path
+# TLS证书路径
 ORDERER_CA="${NETWORK_DIR}/crypto-config/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem"
 
 echo -e "${BLUE}============================================================${NC}"
-echo -e "${BLUE}    Create Channel - ${CHANNEL_NAME}${NC}"
+echo -e "${BLUE}    创建应用通道 - ${CHANNEL_NAME}${NC}"
 echo -e "${BLUE}============================================================${NC}"
 
-# Set peer environment
+# 设置环境变量函数
 set_peer_env() {
     local org=$1
     local peer=$2
 
+    # 清除旧的环境变量
     unset CORE_PEER_LOCALMSPID
     unset CORE_PEER_TLS_ROOTCERT_FILE
     unset CORE_PEER_MSPCONFIGPATH
@@ -63,9 +64,9 @@ set_peer_env() {
     esac
 }
 
-# Create channel
+# 创建通道
 create_channel() {
-    echo -e "${YELLOW}[1/5] Creating channel ${CHANNEL_NAME}...${NC}"
+    echo -e "${YELLOW}[1/5] 创建通道 ${CHANNEL_NAME}...${NC}"
 
     set_peer_env "producer" "peer0"
 
@@ -77,71 +78,63 @@ create_channel() {
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
 
     if [ $? -ne 0 ]; then
-        echo -e "${RED}ERROR: Channel creation failed${NC}"
+        echo -e "${RED}错误: 通道创建失败${NC}"
         exit 1
     fi
 
-    echo -e "${GREEN}Channel created successfully${NC}"
+    echo -e "${GREEN}✓ 通道创建成功${NC}"
 }
 
-# Join channel
+# 组织加入通道
 join_channel() {
     local org=$1
     local peer=$2
 
-    echo -e "${YELLOW}  ${peer}.${org}.supplychain.com joining channel...${NC}"
+    echo -e "${YELLOW}  ${peer}.${org}.supplychain.com 加入通道...${NC}"
 
     set_peer_env "${org}" "${peer}"
 
-    local output
-    output=$(docker exec -i cli peer channel join \
+    docker exec -i cli peer channel join \
         -b ${CHANNEL_NAME}.block \
         --tls \
-        --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem 2>&1)
+        --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
 
-    local result=$?
-    echo "$output"
-
-    if [ $result -ne 0 ]; then
-        if echo "$output" | grep -q "already exists"; then
-            echo -e "${GREEN}  ${peer}.${org} already in channel, skipping${NC}"
-            return 0
-        fi
-        echo -e "${RED}ERROR: ${peer}.${org} failed to join channel${NC}"
+    if [ $? -ne 0 ]; then
+        echo -e "${RED}错误: ${peer}.${org} 加入通道失败${NC}"
         return 1
     fi
 
-    echo -e "${GREEN}  ${peer}.${org} joined channel${NC}"
+    echo -e "${GREEN}  ✓ ${peer}.${org} 已加入通道${NC}"
 }
 
-# All peers join channel
+# 所有组织加入通道
 all_peers_join_channel() {
-    echo -e "${YELLOW}[2/5] All peer nodes joining channel...${NC}"
+    echo -e "${YELLOW}[2/5] 所有Peer节点加入通道...${NC}"
 
-    # Producer org
+    # 生产商组织
     join_channel "producer" "peer0"
     join_channel "producer" "peer1"
 
-    # Distributor org
+    # 经销商组织
     join_channel "distributor" "peer0"
     join_channel "distributor" "peer1"
 
-    # Hospital org
+    # 医院组织
     join_channel "hospital" "peer0"
     join_channel "hospital" "peer1"
 
-    # Regulator org
+    # 监管机构
     join_channel "regulator" "peer0"
     join_channel "regulator" "peer1"
 
-    echo -e "${GREEN}All peers joined channel${NC}"
+    echo -e "${GREEN}✓ 所有Peer节点已加入通道${NC}"
 }
 
-# Update anchor peers
+# 更新锚节点配置
 update_anchor_peers() {
-    echo -e "${YELLOW}[3/5] Updating anchor peers...${NC}"
+    echo -e "${YELLOW}[3/5] 更新锚节点配置...${NC}"
 
-    # Producer anchor peer
+    # 生产商锚节点
     set_peer_env "producer" "peer0"
     docker exec -i cli peer channel update \
         -o orderer1.supplychain.com:7050 \
@@ -149,9 +142,9 @@ update_anchor_peers() {
         -f /opt/gopath/src/github.com/hyperledger/fabric/peer/config/ProducerMSPanchors.tx \
         --tls \
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
-    echo -e "${GREEN}  ProducerMSP anchor peer updated${NC}"
+    echo -e "${GREEN}  ✓ ProducerMSP 锚节点更新完成${NC}"
 
-    # Distributor anchor peer
+    # 经销商锚节点
     set_peer_env "distributor" "peer0"
     docker exec -i cli peer channel update \
         -o orderer1.supplychain.com:7050 \
@@ -159,9 +152,9 @@ update_anchor_peers() {
         -f /opt/gopath/src/github.com/hyperledger/fabric/peer/config/DistributorMSPanchors.tx \
         --tls \
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
-    echo -e "${GREEN}  DistributorMSP anchor peer updated${NC}"
+    echo -e "${GREEN}  ✓ DistributorMSP 锚节点更新完成${NC}"
 
-    # Hospital anchor peer
+    # 医院锚节点
     set_peer_env "hospital" "peer0"
     docker exec -i cli peer channel update \
         -o orderer1.supplychain.com:7050 \
@@ -169,9 +162,9 @@ update_anchor_peers() {
         -f /opt/gopath/src/github.com/hyperledger/fabric/peer/config/HospitalMSPanchors.tx \
         --tls \
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
-    echo -e "${GREEN}  HospitalMSP anchor peer updated${NC}"
+    echo -e "${GREEN}  ✓ HospitalMSP 锚节点更新完成${NC}"
 
-    # Regulator anchor peer
+    # 监管机构锚节点
     set_peer_env "regulator" "peer0"
     docker exec -i cli peer channel update \
         -o orderer1.supplychain.com:7050 \
@@ -179,33 +172,34 @@ update_anchor_peers() {
         -f /opt/gopath/src/github.com/hyperledger/fabric/peer/config/RegulatorMSPanchors.tx \
         --tls \
         --cafile /opt/gopath/src/github.com/hyperledger/fabric/peer/crypto/ordererOrganizations/supplychain.com/orderers/orderer1.supplychain.com/msp/tlscacerts/tlsca.supplychain.com-cert.pem
-    echo -e "${GREEN}  RegulatorMSP anchor peer updated${NC}"
+    echo -e "${GREEN}  ✓ RegulatorMSP 锚节点更新完成${NC}"
 
-    echo -e "${GREEN}All anchor peers updated${NC}"
+    echo -e "${GREEN}✓ 所有锚节点配置更新完成${NC}"
 }
 
-# Verify channel
+# 验证通道
 verify_channel() {
-    echo -e "${YELLOW}[4/5] Verifying channel status...${NC}"
+    echo -e "${YELLOW}[4/5] 验证通道状态...${NC}"
 
     set_peer_env "producer" "peer0"
 
+    # 获取通道信息
     docker exec -i cli peer channel getinfo -c ${CHANNEL_NAME}
 
-    echo -e "${GREEN}Channel verified${NC}"
+    echo -e "${GREEN}✓ 通道验证完成${NC}"
 }
 
-# List channels
+# 显示加入的通道列表
 list_channels() {
-    echo -e "${YELLOW}[5/5] Channel list...${NC}"
+    echo -e "${YELLOW}[5/5] 通道列表...${NC}"
 
     set_peer_env "producer" "peer0"
     docker exec -i cli peer channel list
 
-    echo -e "${GREEN}Channel creation completed${NC}"
+    echo -e "${GREEN}✓ 通道创建流程完成${NC}"
 }
 
-# Main
+# 主函数
 main() {
     echo ""
     create_channel
@@ -220,11 +214,11 @@ main() {
     echo ""
 
     echo -e "${GREEN}============================================================${NC}"
-    echo -e "${GREEN}    Channel Created Successfully!${NC}"
+    echo -e "${GREEN}    通道创建成功!${NC}"
     echo -e "${GREEN}============================================================${NC}"
     echo ""
-    echo -e "${YELLOW}NEXT:${NC}"
-    echo -e "  Run ${BLUE}./scripts/deployChaincode.sh${NC} to deploy chaincode"
+    echo -e "${YELLOW}下一步:${NC}"
+    echo -e "  运行 ${BLUE}./scripts/deployChaincode.sh${NC} 部署智能合约"
     echo ""
 }
 

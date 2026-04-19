@@ -12,6 +12,8 @@ import hospitalRouter from '../controllers/hospital.controller';
 import logisticsRouter from '../controllers/logistics.controller';
 import traceRouter from '../controllers/trace.controller';
 import authRouter from '../controllers/auth.controller';
+import orderRouter from '../controllers/order.controller';
+import alertRouter from '../controllers/alert.controller';
 
 // 导入中间件
 import { authMiddleware } from '../middleware/auth';
@@ -43,6 +45,12 @@ router.use(logisticsRouter.routes());
 
 // 追溯监管路由
 router.use(traceRouter.routes());
+
+// 订单管理路由
+router.use(orderRouter.routes());
+
+// 告警管理路由
+router.use(alertRouter.routes());
 
 // =============================================================================
 // API文档（简易版）

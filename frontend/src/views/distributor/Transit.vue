@@ -13,6 +13,7 @@
           @keyup.enter="handleSearch"
         >
           <el-button type="primary" @click="handleSearch">搜索</el-button>
+        </el-input>
       </div>
 
       <!-- 资产列表 -->

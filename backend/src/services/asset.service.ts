@@ -14,13 +14,11 @@ const useMockMode = (): boolean => {
   if (process.env.MOCK_MODE === 'true') return true;
   if (process.env.MOCK_MODE === 'false') return false;
 
-  // 2. 开发环境默认启用
+  // 2. 配置文件指定
   if (config.mockMode?.enabled) return true;
 
-  // 3. 生产环境不启用
-  if (config.server.env === 'production') return false;
-
-  return true;
+  // 3. 默认使用真实区块链网络
+  return false;
 };
 
 // =============================================================================
@@ -43,6 +41,7 @@ export interface MedicalAsset {
   name: string;
   specification: string;
   batchNumber: string;
+  quantity: number;
   productionDate: string;
   expiryDate: string;
   docHash: string;
@@ -61,6 +60,7 @@ export interface InitAssetParams {
   name: string;
   specification: string;
   batchNumber: string;
+  quantity: number;
   productionDate: string;
   expiryDate: string;
   docHash: string;
@@ -211,10 +211,11 @@ export class AssetService {
           name: args[1],
           specification: args[2],
           batchNumber: args[3],
-          productionDate: args[4],
-          expiryDate: args[5],
-          docHash: args[6],
-          producer: args[7],
+          quantity: parseInt(args[4], 10),
+          productionDate: args[5],
+          expiryDate: args[6],
+          docHash: args[7],
+          producer: args[8],
         });
 
       case 'TransferAsset':
@@ -274,6 +275,7 @@ export class AssetService {
       params.name,
       params.specification,
       params.batchNumber,
+      String(params.quantity),
       params.productionDate,
       params.expiryDate,
       params.docHash,
@@ -391,10 +393,68 @@ export class AssetService {
   }
 
   // =========================================================================
-  // 获取资产历史记录（全链追溯）
+  // 获取资产历史记录（全链追溯，含操作类型推导）
   // =========================================================================
   public async getHistory(udi: string): Promise<ServiceResponse> {
-    return this.executeContract('evaluate', 'GetHistory', udi);
+    const result = await this.executeContract('evaluate', 'GetHistory', udi);
+
+    if (!result.success || !result.data) {
+      return result;
+    }
+
+    const records = Array.isArray(result.data) ? result.data : [];
+
+    // 对历史记录做后处理，推导每条记录的操作类型
+    const enriched = records.map((record: any, index: number) => {
+      const value = record.value || {};
+      const prevRecord = index > 0 ? records[index - 1] : null;
+      const prevValue = prevRecord?.value || {};
+
+      let txType = '状态更新';
+      let action = '';
+
+      if (index === 0) {
+        // 第一条记录 → 资产初始化
+        txType = 'INIT';
+        action = '资产初始化（赋码上链）';
+      } else if (record.isDelete) {
+        txType = 'DELETE';
+        action = '资产删除';
+      } else if (value.status === 'CONSUMED') {
+        txType = 'CONSUME';
+        action = '消耗核销（临床使用）';
+      } else if (value.status === 'RECALL') {
+        txType = 'RECALL';
+        action = '资产召回';
+      } else if (value.status === 'EXCEPTION') {
+        txType = 'EXCEPTION';
+        action = '环境异常';
+      } else if (value.owner !== prevValue.owner && value.status === 'IN_STOCK') {
+        txType = 'RECEIVE';
+        action = '收货确权（入库）';
+      } else if (value.owner !== prevValue.owner) {
+        txType = 'TRANSFER';
+        action = '权属转移（发货）';
+      } else if (value.status === 'IN_TRANSIT' && prevValue.status === 'CREATED') {
+        txType = 'TRANSFER';
+        action = '权属转移（发货）';
+      } else {
+        txType = 'UPDATE';
+        action = '状态更新';
+      }
+
+      return {
+        ...record,
+        txType,
+        action,
+        value,
+      };
+    });
+
+    return {
+      ...result,
+      data: enriched,
+    };
   }
 
   // =========================================================================

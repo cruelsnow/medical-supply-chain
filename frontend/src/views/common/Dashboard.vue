@@ -59,18 +59,18 @@
             资产登记
           </el-button>
         </el-col>
-        <!-- 收货确认 - 仅 operator/admin 可见 -->
+        <!-- 订单管理 - 经销商 operator/admin 可见 -->
         <el-col :span="6" v-if="hasOrg('distributor') && canWrite">
-          <el-button type="warning" size="large" @click="$router.push('/distributor/receive')">
-            <el-icon><CircleCheck /></el-icon>
-            收货确认
+          <el-button type="warning" size="large" @click="$router.push('/distributor/orders')">
+            <el-icon><Document /></el-icon>
+            订单管理
           </el-button>
         </el-col>
-        <!-- 验收入库 - 仅 operator/admin 可见 -->
+        <!-- 采购订单 - 医院 operator/admin 可见 -->
         <el-col :span="6" v-if="hasOrg('hospital') && canWrite">
-          <el-button type="success" size="large" @click="$router.push('/hospital/inbound')">
-            <el-icon><Download /></el-icon>
-            验收入库
+          <el-button type="success" size="large" @click="$router.push('/hospital/orders')">
+            <el-icon><Document /></el-icon>
+            采购订单
           </el-button>
         </el-col>
         <!-- 全链追溯 - 所有角色可见 -->

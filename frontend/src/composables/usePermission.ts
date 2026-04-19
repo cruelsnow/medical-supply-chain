@@ -58,11 +58,22 @@ export const MENU_PERMISSIONS: Record<string, string[]> = {
   'hospital_inventory': ['viewer', 'operator', 'admin'],  // 库存管理（只读）
   'hospital_consume': ['operator', 'admin'],              // 临床核销（写操作）
 
+  // ========== 医院订单 ==========
+  'hospital_orders': ['operator', 'admin'],               // 采购订单（写操作）
+
+  // ========== 经销商订单 ==========
+  'distributor_orders': ['operator', 'admin'],             // 订单管理（写操作）
+
+  // ========== 生产商订单 ==========
+  'producer_orders': ['operator', 'admin'],                // 订单管理（写操作）
+
   // ========== 监管机构菜单 ==========
   'regulator': ['viewer', 'operator', 'admin'],           // 监管追溯（父菜单）
   'regulator_trace': ['viewer', 'operator', 'admin'],     // 全链追溯（只读）
   'regulator_verify': ['viewer', 'operator', 'admin'],    // 哈希校验（只读）
   'regulator_stats': ['viewer', 'operator', 'admin'],     // 数据统计（只读）
+  'regulator_order_audit': ['viewer', 'operator', 'admin'], // 订单审计（只读）
+  'regulator_alerts': ['viewer', 'operator', 'admin'],    // 告警中心（只读）
 
   // ========== 系统管理（仅管理员）==========
   'admin': ['admin'],                                     // 系统管理（父菜单）
@@ -249,17 +260,19 @@ export function usePermission() {
     // 路由路径到菜单 key 的映射
     const routeMenuMap: Record<string, string> = {
       '/producer/init': 'producer_init',
-      '/producer/ship': 'producer_ship',
       '/producer/list': 'producer_list',
-      '/distributor/receive': 'distributor_receive',
-      '/distributor/ship': 'distributor_ship',
+      '/producer/orders': 'producer_orders',
       '/distributor/env-monitor': 'distributor_env',
-      '/hospital/inbound': 'hospital_inbound',
+      '/distributor/orders': 'distributor_orders',
       '/hospital/inventory': 'hospital_inventory',
       '/hospital/consume': 'hospital_consume',
+      '/hospital/orders': 'hospital_orders',
+      '/hospital/order-create': 'hospital_orders',
       '/regulator/trace': 'regulator_trace',
       '/regulator/verify': 'regulator_verify',
       '/regulator/stats': 'regulator_stats',
+      '/regulator/order-audit': 'regulator_order_audit',
+      '/regulator/alerts': 'regulator_alerts',
       '/admin/users': 'admin_users',
     }
 

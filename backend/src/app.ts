@@ -17,6 +17,7 @@ import { errorHandler } from './middleware/errorHandler';
 import { responseFormatter } from './middleware/responseFormatter';
 import { connectDB, closeDB } from './models';
 import { initUsers } from './scripts/initUsers';
+import { mockOrderService } from './services/mock-order.service';
 
 // 创建Koa应用实例
 const app = new Koa();
@@ -140,7 +141,10 @@ async function start() {
     // 2. 初始化默认用户
     await initUsers();
 
-    // 3. 启动HTTP服务
+    // 3. 初始化模拟订单和告警数据
+    await mockOrderService.initMockData();
+
+    // 4. 启动HTTP服务
     server.listen(PORT, HOST, () => {
       console.log('');
       console.log('='.repeat(60));
@@ -180,6 +184,20 @@ async function start() {
       console.log('  [追溯查询]');
       console.log('  POST   /api/trace/verify        - 哈希校验');
       console.log('  GET    /api/trace/report/:udi   - 溯源报告');
+      console.log('');
+      console.log('  [订单管理]');
+      console.log('  POST   /api/order               - 创建订单');
+      console.log('  GET    /api/order               - 订单列表');
+      console.log('  GET    /api/order/:id           - 订单详情');
+      console.log('  PUT    /api/order/:id/confirm   - 经销商确认');
+      console.log('  PUT    /api/order/:id/dispatch  - 发货');
+      console.log('  PUT    /api/order/:id/deliver   - 确认送达');
+      console.log('');
+      console.log('  [告警中心]');
+      console.log('  GET    /api/alert               - 告警列表');
+      console.log('  PUT    /api/alert/:id/acknowledge - 确认告警');
+      console.log('  PUT    /api/alert/:id/resolve   - 解决告警');
+      console.log('  POST   /api/alert/check         - 手动检查');
       console.log('');
     });
   } catch (error) {

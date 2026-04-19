@@ -30,6 +30,7 @@
         <el-table-column prop="name" label="耗材名称" />
         <el-table-column prop="specification" label="规格" width="100" />
         <el-table-column prop="batchNumber" label="批次号" width="100" />
+        <el-table-column prop="quantity" label="数量" width="80" />
         <el-table-column prop="expiryDate" label="有效期" width="110" />
         <el-table-column prop="status" label="状态" width="90">
           <template #default="{ row }">

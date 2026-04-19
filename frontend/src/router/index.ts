@@ -67,16 +67,6 @@ const routes: RouteRecordRaw[] = [
             },
           },
           {
-            path: 'ship',
-            name: 'ShipManage',
-            component: () => import('@/views/producer/ShipManage.vue'),
-            meta: {
-              title: '发货管理',
-              icon: 'Van',
-              permission: 'producer_ship',
-            },
-          },
-          {
             path: 'list',
             name: 'AssetList',
             component: () => import('@/views/producer/AssetList.vue'),
@@ -86,6 +76,16 @@ const routes: RouteRecordRaw[] = [
               permission: 'producer_list',
             },
           },
+          {
+            path: 'orders',
+            name: 'ProducerOrders',
+            component: () => import('@/views/producer/OrderManage.vue'),
+            meta: {
+              title: '订单管理',
+              icon: 'Document',
+              permission: 'producer_orders',
+            },
+          },
         ],
       },
 
@@ -93,7 +93,7 @@ const routes: RouteRecordRaw[] = [
       {
         path: 'distributor',
         name: 'Distributor',
-        redirect: '/distributor/transit',
+        redirect: '/distributor/orders',
         meta: {
           title: '物流管理',
           icon: 'Truck',
@@ -101,23 +101,13 @@ const routes: RouteRecordRaw[] = [
         },
         children: [
           {
-            path: 'receive',
-            name: 'Receive',
-            component: () => import('@/views/distributor/Receive.vue'),
+            path: 'orders',
+            name: 'DistributorOrders',
+            component: () => import('@/views/distributor/OrderManage.vue'),
             meta: {
-              title: '收货确认',
-              icon: 'CircleCheck',
-              permission: 'distributor_receive',
-            },
-          },
-          {
-            path: 'ship',
-            name: 'DistributorShip',
-            component: () => import('@/views/distributor/ShipManage.vue'),
-            meta: {
-              title: '发货管理',
-              icon: 'Van',
-              permission: 'distributor_ship',
+              title: '订单管理',
+              icon: 'Document',
+              permission: 'distributor_orders',
             },
           },
           {
@@ -137,7 +127,6 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '在途资产',
               icon: 'Location',
-              // 所有角色可见
             },
           },
         ],
@@ -155,13 +144,24 @@ const routes: RouteRecordRaw[] = [
         },
         children: [
           {
-            path: 'inbound',
-            name: 'Inbound',
-            component: () => import('@/views/hospital/Inbound.vue'),
+            path: 'orders',
+            name: 'HospitalOrders',
+            component: () => import('@/views/hospital/OrderList.vue'),
             meta: {
-              title: '验收入库',
-              icon: 'Download',
-              permission: 'hospital_inbound',
+              title: '采购订单',
+              icon: 'Document',
+              permission: 'hospital_orders',
+            },
+          },
+          {
+            path: 'order-create',
+            name: 'OrderCreate',
+            component: () => import('@/views/hospital/OrderCreate.vue'),
+            meta: {
+              title: '创建订单',
+              icon: 'Plus',
+              permission: 'hospital_orders',
+              hidden: true,
             },
           },
           {
@@ -226,6 +226,26 @@ const routes: RouteRecordRaw[] = [
               title: '数据统计',
               icon: 'TrendCharts',
               permission: 'regulator_stats',
+            },
+          },
+          {
+            path: 'order-audit',
+            name: 'OrderAudit',
+            component: () => import('@/views/regulator/OrderAudit.vue'),
+            meta: {
+              title: '订单审计',
+              icon: 'Document',
+              permission: 'regulator_order_audit',
+            },
+          },
+          {
+            path: 'alerts',
+            name: 'AlertDashboard',
+            component: () => import('@/views/regulator/AlertDashboard.vue'),
+            meta: {
+              title: '告警中心',
+              icon: 'Bell',
+              permission: 'regulator_alerts',
             },
           },
         ],

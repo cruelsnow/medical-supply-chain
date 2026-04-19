@@ -25,6 +25,14 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
+            <el-form-item label="生产数量" prop="quantity">
+              <el-input-number v-model="form.quantity" :min="1" :controls="false" placeholder="请输入生产数量" style="width: 100%" />
+            </el-form-item>
+          </el-col>
+        </el-row>
+
+        <el-row :gutter="20">
+          <el-col :span="12">
             <el-form-item label="UDI编码" prop="udi">
               <el-input v-model="form.udi" placeholder="自动生成或手动输入">
                 <template #append>
@@ -151,6 +159,7 @@ const form = reactive({
   name: '',
   specification: '',
   batchNumber: '',
+  quantity: 100,
   productionDate: '',
   expiryDate: '',
   docHash: '',
@@ -162,6 +171,7 @@ const rules: FormRules = {
   name: [{ required: true, message: '请输入耗材名称', trigger: 'blur' }],
   specification: [{ required: true, message: '请输入规格型号', trigger: 'blur' }],
   batchNumber: [{ required: true, message: '请输入批次号', trigger: 'blur' }],
+  quantity: [{ required: true, message: '请输入生产数量', trigger: 'blur' }],
   udi: [{ required: true, message: '请输入UDI编码', trigger: 'blur' }],
   productionDate: [{ required: true, message: '请选择生产日期', trigger: 'change' }],
   expiryDate: [{ required: true, message: '请选择有效期', trigger: 'change' }],

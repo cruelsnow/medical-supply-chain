@@ -17,6 +17,7 @@ export const initAssetSchema = Joi.object({
   name: Joi.string().required().max(200).description('耗材名称'),
   specification: Joi.string().required().max(100).description('规格型号'),
   batchNumber: Joi.string().required().max(50).description('批次号'),
+  quantity: Joi.number().integer().min(1).required().description('生产数量'),
   productionDate: Joi.string().required().pattern(/^\d{4}-\d{2}-\d{2}$/).description('生产日期'),
   expiryDate: Joi.string().required().pattern(/^\d{4}-\d{2}-\d{2}$/).description('有效期'),
   docHash: Joi.string().required().length(64).description('质检报告哈希'),
@@ -67,6 +68,44 @@ export const loginSchema = Joi.object({
   username: Joi.string().required().min(3).max(50).description('用户名'),
   password: Joi.string().required().min(6).max(100).description('密码'),
   orgName: Joi.string().required().valid('producer', 'distributor', 'hospital', 'regulator').description('组织名称'),
+});
+
+// =============================================================================
+// 订单验证模式
+// =============================================================================
+
+// 创建订单验证模式
+export const createOrderSchema = Joi.object({
+  title: Joi.string().required().max(200).description('订单标题'),
+  expectedDeliveryDate: Joi.string().required().pattern(/^\d{4}-\d{2}-\d{2}$/).description('期望交付日期'),
+  remarks: Joi.string().allow('').max(1000).description('备注'),
+  items: Joi.array().min(1).items(Joi.object({
+    materialName: Joi.string().required().max(200).description('耗材名称'),
+    specification: Joi.string().required().max(100).description('规格型号'),
+    quantity: Joi.number().integer().min(1).required().description('数量'),
+    unit: Joi.string().required().max(20).description('单位'),
+    unitPrice: Joi.number().min(0).required().description('单价'),
+    remarks: Joi.string().allow('').max(500).description('备注'),
+  })).required().description('订单项列表'),
+});
+
+// 订单状态更新验证模式
+export const updateOrderStatusSchema = Joi.object({
+  remarks: Joi.string().allow('').max(1000).description('备注'),
+  rejectReason: Joi.string().allow('').max(500).description('拒绝原因'),
+  shippingId: Joi.string().allow('').max(50).description('运输单号'),
+});
+
+// 订单列表查询验证模式
+export const orderListQuerySchema = Joi.object({
+  status: Joi.string().allow('').valid(
+    'PENDING', 'CONFIRMED', 'PRODUCING', 'READY_TO_SHIP',
+    'IN_TRANSIT', 'DELIVERED', 'ACCEPTED', 'COMPLETED',
+    'CANCELLED', 'REJECTED'
+  ).description('订单状态'),
+  keyword: Joi.string().allow('').max(100).description('搜索关键字'),
+  page: Joi.number().integer().min(1).default(1).description('页码'),
+  pageSize: Joi.number().integer().min(1).max(100).default(10).description('每页数量'),
 });
 
 // =============================================================================
