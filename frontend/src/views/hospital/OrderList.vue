@@ -68,7 +68,7 @@
           <template #default="{ row }">
             <el-button type="primary" link @click="openDetail(row)">查看详情</el-button>
             <el-button
-              v-if="canWrite && row.status === 'DELIVERED'"
+              v-if="canWrite && row.status === 'DISTRIBUTOR_SHIPPING'"
               type="success"
               link
               @click="acceptOrder(row)"
@@ -170,7 +170,7 @@
         </el-table>
 
         <!-- 收货确认 (仅 DELIVERED 状态) -->
-        <template v-if="currentOrder?.status === 'DELIVERED' && canWrite">
+        <template v-if="currentOrder?.status === 'DISTRIBUTOR_SHIPPING' && canWrite">
           <h4 class="section-title">收货确认</h4>
           <el-alert
             title="订单已送达，请核对货品信息后确认收货入库"
@@ -236,6 +236,7 @@ const statusOptions: StatusOption[] = [
   { label: '待发货', value: 'READY_TO_SHIP' },
   { label: '运输中', value: 'IN_TRANSIT' },
   { label: '已送达', value: 'DELIVERED' },
+  { label: '配送中', value: 'DISTRIBUTOR_SHIPPING' },
   { label: '已验收', value: 'ACCEPTED' },
   { label: '已完成', value: 'COMPLETED' },
   { label: '已取消', value: 'CANCELLED' },
@@ -249,6 +250,7 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   READY_TO_SHIP: '待发货',
   IN_TRANSIT: '运输中',
   DELIVERED: '已送达',
+  DISTRIBUTOR_SHIPPING: '配送中',
   ACCEPTED: '已验收',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
@@ -262,6 +264,7 @@ const STATUS_TAG_TYPE_MAP: Record<string, 'info' | 'success' | 'warning' | 'dang
   READY_TO_SHIP: 'warning',
   IN_TRANSIT: 'warning',
   DELIVERED: 'success',
+  DISTRIBUTOR_SHIPPING: 'warning',
   ACCEPTED: 'success',
   COMPLETED: 'success',
   CANCELLED: 'info',
@@ -272,6 +275,7 @@ const STATUS_TAG_TYPE_MAP: Record<string, 'info' | 'success' | 'warning' | 'dang
 const LOGISTICS_VISIBLE_STATUSES = new Set([
   'IN_TRANSIT',
   'DELIVERED',
+  'DISTRIBUTOR_SHIPPING',
   'ACCEPTED',
   'COMPLETED',
 ])

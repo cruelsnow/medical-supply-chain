@@ -26,8 +26,16 @@
         class="mb-20"
       />
 
+      <!-- 批量核销按钮 -->
+      <div v-if="selectedItems.length > 0" style="margin-bottom: 12px">
+        <el-button type="primary" @click="showBatchConsumeDialog">
+          批量核销（已选 {{ selectedItems.length }} 项）
+        </el-button>
+      </div>
+
       <!-- 库存列表 -->
-      <el-table :data="inventoryList" stripe v-loading="loading">
+      <el-table :data="inventoryList" stripe v-loading="loading" @selection-change="handleSelectionChange">
+        <el-table-column type="selection" width="45" />
         <el-table-column prop="udi" label="UDI编码" width="200" />
         <el-table-column prop="name" label="耗材名称" />
         <el-table-column prop="specification" label="规格" width="100" />
@@ -63,8 +71,26 @@
         <el-form-item label="耗材名称">
           <el-input v-model="consumeForm.assetName" disabled />
         </el-form-item>
+        <el-form-item label="库存数量">
+          <span>{{ consumeForm.stockQuantity }} 个</span>
+        </el-form-item>
+        <el-form-item label="核销数量" required>
+          <el-input-number v-model="consumeForm.consumeQuantity" :min="1" :max="consumeForm.stockQuantity" style="width: 200px" />
+          <span style="margin-left: 10px; color: #909399">最多核销 {{ consumeForm.stockQuantity }} 个</span>
+        </el-form-item>
         <el-form-item label="使用科室" required>
-          <el-input v-model="consumeForm.department" placeholder="输入使用科室" />
+          <el-select v-model="consumeForm.department" placeholder="选择科室" style="width: 100%">
+            <el-option label="手术室" value="手术室" />
+            <el-option label="内科" value="内科" />
+            <el-option label="外科" value="外科" />
+            <el-option label="骨科" value="骨科" />
+            <el-option label="心内科" value="心内科" />
+            <el-option label="神经内科" value="神经内科" />
+            <el-option label="急诊科" value="急诊科" />
+            <el-option label="ICU" value="ICU" />
+            <el-option label="妇产科" value="妇产科" />
+            <el-option label="儿科" value="儿科" />
+          </el-select>
         </el-form-item>
         <el-form-item label="手术ID">
           <el-input v-model="consumeForm.surgeryId" placeholder="关联手术ID（可选）" />
@@ -80,6 +106,41 @@
         <el-button @click="consumeDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="consumeLoading" @click="confirmConsume">
           确认核销
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 批量核销对话框 -->
+    <el-dialog v-model="batchConsumeDialogVisible" title="批量消耗核销" width="500px">
+      <el-form :model="batchConsumeForm" label-width="100px">
+        <el-form-item label="核销数量">
+          <span>{{ selectedItems.length }} 项资产</span>
+        </el-form-item>
+        <el-form-item label="使用科室" required>
+          <el-select v-model="batchConsumeForm.department" placeholder="选择科室" style="width: 100%">
+            <el-option label="手术室" value="手术室" />
+            <el-option label="内科" value="内科" />
+            <el-option label="外科" value="外科" />
+            <el-option label="骨科" value="骨科" />
+            <el-option label="心内科" value="心内科" />
+            <el-option label="神经内科" value="神经内科" />
+            <el-option label="急诊科" value="急诊科" />
+            <el-option label="ICU" value="ICU" />
+            <el-option label="妇产科" value="妇产科" />
+            <el-option label="儿科" value="儿科" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="操作者" required>
+          <el-input v-model="batchConsumeForm.operator" placeholder="操作者姓名" />
+        </el-form-item>
+        <el-form-item label="备注">
+          <el-input v-model="batchConsumeForm.remarks" type="textarea" placeholder="备注信息" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="batchConsumeDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="batchConsumeLoading" @click="confirmBatchConsume">
+          确认批量核销
         </el-button>
       </template>
     </el-dialog>
@@ -133,11 +194,76 @@ const filters = reactive({
 const consumeForm = reactive({
   udi: '',
   assetName: '',
+  stockQuantity: 1,
+  consumeQuantity: 1,
   department: '',
   surgeryId: '',
   operator: '',
   remarks: '',
 })
+
+// 多选批量核销
+const selectedItems = ref<any[]>([])
+const batchConsumeDialogVisible = ref(false)
+const batchConsumeLoading = ref(false)
+const batchConsumeForm = reactive({
+  department: '',
+  operator: '',
+  remarks: '',
+})
+
+const handleSelectionChange = (selection: any[]) => {
+  selectedItems.value = selection
+}
+
+const showBatchConsumeDialog = () => {
+  batchConsumeForm.department = ''
+  batchConsumeForm.operator = ''
+  batchConsumeForm.remarks = ''
+  batchConsumeDialogVisible.value = true
+}
+
+const confirmBatchConsume = async () => {
+  if (!batchConsumeForm.department || !batchConsumeForm.operator) {
+    ElMessage.warning('请填写必要信息')
+    return
+  }
+
+  batchConsumeLoading.value = true
+  const user = JSON.parse(localStorage.getItem('user') || '{}')
+  let successCount = 0
+  let failCount = 0
+
+  for (const asset of selectedItems.value) {
+    try {
+      const res = await hospitalApi.consume({
+        udi: asset.udi,
+        hospital: user.orgName || 'hospital',
+        department: batchConsumeForm.department,
+        surgeryId: '',
+        operator: batchConsumeForm.operator,
+        remarks: batchConsumeForm.remarks,
+      }) as any
+      if (res.success) {
+        successCount++
+      } else {
+        failCount++
+      }
+    } catch {
+      failCount++
+    }
+  }
+
+  batchConsumeLoading.value = false
+  batchConsumeDialogVisible.value = false
+
+  if (successCount > 0) {
+    ElMessage.success(`成功核销 ${successCount} 项${failCount > 0 ? `，失败 ${failCount} 项` : ''}`)
+    loadInventory()
+  } else {
+    ElMessage.error('批量核销全部失败')
+  }
+}
 
 const detailData = reactive({
   udi: '',
@@ -205,6 +331,8 @@ const showDetailDialog = (asset: any) => {
 const showConsumeDialog = (asset: any) => {
   consumeForm.udi = asset.udi
   consumeForm.assetName = asset.name
+  consumeForm.stockQuantity = asset.quantity || 1
+  consumeForm.consumeQuantity = 1
   consumeForm.department = ''
   consumeForm.surgeryId = ''
   consumeForm.operator = ''
@@ -224,11 +352,12 @@ const confirmConsume = async () => {
     const user = JSON.parse(localStorage.getItem('user') || '{}')
     const res = await hospitalApi.consume({
       udi: consumeForm.udi,
-      hospital: user.name || '医院',
+      hospital: user.orgName || 'hospital',
       department: consumeForm.department,
       surgeryId: consumeForm.surgeryId,
       operator: consumeForm.operator,
       remarks: consumeForm.remarks,
+      consumeQuantity: consumeForm.consumeQuantity,
     }) as any
 
     if (res.success) {

@@ -222,31 +222,54 @@ router.get(
 
       assetService.setContext('hospital', ctx.user?.walletId || '1');
 
-      // 查询已消耗的资产，只查本医院的
-      const result = await assetService.queryByStatus('CONSUMED');
+      // 查询消耗记录（包含科室、操作者、消耗数量等详情）
+      const result = await assetService.queryConsumeRecords(ctx.user?.orgName || 'hospital');
 
-      // 过滤为仅本医院消耗的资产
-      let filteredData = (result.data || []).filter((a: any) => a.owner === 'hospital');
+      let filteredData = result.data || [];
 
       if (startDate || endDate) {
-        filteredData = filteredData.filter((asset: any) => {
-          const assetDate = new Date(asset.updatedAt || asset.consumedAt);
-          if (startDate && assetDate < new Date(startDate)) return false;
-          if (endDate && assetDate > new Date(endDate + 'T23:59:59')) return false;
+        filteredData = filteredData.filter((record: any) => {
+          const recordDate = new Date(record.consumedAt || record.updatedAt);
+          if (startDate && recordDate < new Date(startDate)) return false;
+          if (endDate && recordDate > new Date(endDate + 'T23:59:59')) return false;
           return true;
         });
       }
 
       if (department) {
-        filteredData = filteredData.filter((asset: any) =>
-          asset.department?.toLowerCase().includes(department.toLowerCase())
+        filteredData = filteredData.filter((record: any) =>
+          record.department?.toLowerCase().includes(department.toLowerCase())
         );
       }
 
+      // 补充资产详情（name, specification, batchNumber）
+      const udiList = [...new Set(filteredData.map((r: any) => r.udi as string).filter(Boolean))] as string[];
+      const assetMap: Record<string, any> = {};
+      for (const udi of udiList) {
+        try {
+          const assetRes = await assetService.queryAsset(udi);
+          if (assetRes.success && assetRes.data) {
+            assetMap[udi] = assetRes.data;
+          }
+        } catch {
+          // 查不到就跳过
+        }
+      }
+
+      const enrichedData = filteredData.map((record: any) => {
+        const asset = assetMap[record.udi] || {};
+        return {
+          ...record,
+          name: record.name || asset.name || '-',
+          specification: record.specification || asset.specification || '-',
+          batchNumber: record.batchNumber || asset.batchNumber || '-',
+        };
+      });
+
       ctx.body = {
         success: true,
-        data: filteredData,
-        total: filteredData.length,
+        data: enrichedData,
+        total: enrichedData.length,
         filters: { startDate, endDate, department },
       };
     } catch (error: any) {

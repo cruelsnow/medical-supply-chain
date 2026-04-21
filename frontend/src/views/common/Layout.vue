@@ -33,6 +33,8 @@
           </el-menu-item>
           <!-- 资产列表 - 所有角色可见 -->
           <el-menu-item index="/producer/list">资产列表</el-menu-item>
+          <!-- 仓储清单 - 所有角色可见 -->
+          <el-menu-item index="/producer/warehouse">仓储清单</el-menu-item>
           <!-- 订单管理 - 仅 operator/admin 可见 -->
           <el-menu-item v-if="canAccessMenu('producer_orders')" index="/producer/orders">
             订单管理
@@ -66,6 +68,10 @@
           <!-- 临床核销 - 仅 operator/admin 可见 -->
           <el-menu-item v-if="canAccessMenu('hospital_consume')" index="/hospital/consume">
             临床核销
+          </el-menu-item>
+          <!-- 消耗记录 -->
+          <el-menu-item v-if="canAccessMenu('hospital_consume')" index="/hospital/consumption">
+            消耗记录
           </el-menu-item>
         </el-sub-menu>
 

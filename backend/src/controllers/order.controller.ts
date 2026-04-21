@@ -214,7 +214,7 @@ router.put(
 );
 
 // =============================================================================
-// 确认送达
+// 确认送达（经销商收货入仓）
 // =============================================================================
 router.put(
   '/:id/deliver',
@@ -229,7 +229,33 @@ router.put(
         ctx.user!.userId,
         ctx.user!.orgName
       );
-      ctx.body = { success: true, data: order, message: '已确认送达' };
+      ctx.body = { success: true, data: order, message: '已确认收货入仓' };
+    } catch (error: any) {
+      ctx.status = error.message.includes('不允许') ? 400 : 500;
+      ctx.body = { success: false, error: error.message };
+    }
+  }
+);
+
+// =============================================================================
+// 经销商发货给医院
+// =============================================================================
+router.put(
+  '/:id/distributor-dispatch',
+  requireWritePermission,
+  orgCheckMiddleware(['distributor']),
+  async (ctx: Context) => {
+    try {
+      const { id } = ctx.params;
+      const { distributorShippingId } = ctx.request.body as any;
+      const order = await orderService.transitionStatus(
+        id,
+        OrderStatus.DISTRIBUTOR_SHIPPING,
+        ctx.user!.userId,
+        ctx.user!.orgName,
+        { distributorShippingId }
+      );
+      ctx.body = { success: true, data: order, message: '经销商已发货给医院' };
     } catch (error: any) {
       ctx.status = error.message.includes('不允许') ? 400 : 500;
       ctx.body = { success: false, error: error.message };

@@ -47,7 +47,8 @@ const STATUS_TRANSITIONS: Record<string, string[]> = {
   PRODUCING: ['READY_TO_SHIP', 'CANCELLED'],
   READY_TO_SHIP: ['IN_TRANSIT', 'CANCELLED'],
   IN_TRANSIT: ['DELIVERED'],
-  DELIVERED: ['ACCEPTED'],
+  DELIVERED: ['DISTRIBUTOR_SHIPPING'],
+  DISTRIBUTOR_SHIPPING: ['ACCEPTED'],
   ACCEPTED: ['COMPLETED'],
 };
 
@@ -286,66 +287,150 @@ export class OrderService {
         }
         break;
       }
-      case OrderStatus.DELIVERED:
+      case OrderStatus.DELIVERED: {
+        // 经销商确认收货：链上 confirmReceipt，资产入经销商仓库
         updateData.actualDeliveryDate = new Date().toISOString().slice(0, 10);
-        break;
-      case OrderStatus.ACCEPTED: {
-        // 医院验收入库：链上资产转移给医院并确认收货
-        const orderItems = await OrderItem.findAll({ where: { orderId } });
-        const errors: string[] = [];
+        const deliveredItems = await OrderItem.findAll({ where: { orderId } });
+        const receiveErrors: string[] = [];
 
-        for (const item of orderItems) {
+        for (const item of deliveredItems) {
           if (!item.udi) continue;
 
           let chainSuccess = false;
-
           try {
-            // 1. 先查当前资产状态，判断需要执行哪步操作
-            this.assetService.setContext('hospital', '1');
+            this.assetService.setContext('distributor', '1');
             const assetResult = await this.assetService.queryAsset(item.udi);
 
             if (!assetResult.success || !assetResult.data) {
-              errors.push(`${item.udi}: 资产不存在`);
+              receiveErrors.push(`${item.udi}: 资产不存在`);
               continue;
             }
 
             const currentAssetStatus = (assetResult.data as any).status;
 
             if (currentAssetStatus === 'IN_STOCK') {
-              // 已经入库，跳过
+              // 已入库，跳过
               chainSuccess = true;
             } else if (currentAssetStatus === 'IN_TRANSIT') {
-              // 在途 → 直接入库（收货确权）
+              // 在途 → 确认收货入库
               await this.assetService.confirmReceipt({
                 udi: item.udi,
-                receiverName: 'hospital',
+                receiverName: 'distributor',
               });
               chainSuccess = true;
-            } else if (currentAssetStatus === 'CREATED') {
-              // 还在 CREATED（未发货） → 先转移再入库
-              this.assetService.setContext('producer', '1');
+            } else {
+              receiveErrors.push(`${item.udi}: 状态 ${currentAssetStatus} 无法收货`);
+              continue;
+            }
+          } catch (err: any) {
+            receiveErrors.push(`${item.udi}: ${err.message}`);
+          }
+
+          if (chainSuccess) {
+            await OrderItem.update(
+              { deliveryStatus: 'RECEIVED' },
+              { where: { id: item.id } }
+            );
+          }
+        }
+
+        if (receiveErrors.length > 0) {
+          console.warn(`订单 ${order.orderNumber} 经销商收货部分失败:`, receiveErrors);
+        }
+        break;
+      }
+      case OrderStatus.DISTRIBUTOR_SHIPPING: {
+        // 经销商发货给医院：链上 transferAsset 从 distributor 到 hospital
+        updateData.distributorShippingId = extraData?.distributorShippingId || '';
+        const shippingItems = await OrderItem.findAll({ where: { orderId } });
+        const shipErrors: string[] = [];
+
+        for (const item of shippingItems) {
+          if (!item.udi) continue;
+
+          let chainSuccess = false;
+          try {
+            this.assetService.setContext('distributor', '1');
+            const assetResult = await this.assetService.queryAsset(item.udi);
+
+            if (!assetResult.success || !assetResult.data) {
+              shipErrors.push(`${item.udi}: 资产不存在`);
+              continue;
+            }
+
+            const currentAssetStatus = (assetResult.data as any).status;
+
+            if (currentAssetStatus === 'IN_TRANSIT') {
+              // 已在途（经销商已发货），跳过
+              chainSuccess = true;
+            } else if (currentAssetStatus === 'IN_STOCK') {
+              // 在库 → 转移给医院
               await this.assetService.transferAsset({
                 udi: item.udi,
                 newOwner: 'hospital',
                 newOwnerMSP: 'HospitalMSP',
-                description: `订单 ${order.orderNumber} 直接交付医院`,
+                description: `订单 ${order.orderNumber} 经销商发货给医院`,
               });
+              chainSuccess = true;
+            } else {
+              shipErrors.push(`${item.udi}: 状态 ${currentAssetStatus} 无法发货`);
+              continue;
+            }
+          } catch (err: any) {
+            shipErrors.push(`${item.udi}: ${err.message}`);
+          }
 
-              this.assetService.setContext('hospital', '1');
+          if (chainSuccess) {
+            await OrderItem.update(
+              { deliveryStatus: 'DISTRIBUTOR_SHIPPED' },
+              { where: { id: item.id } }
+            );
+          }
+        }
+
+        if (shipErrors.length > 0) {
+          console.warn(`订单 ${order.orderNumber} 经销商发货部分失败:`, shipErrors);
+        }
+        break;
+      }
+      case OrderStatus.ACCEPTED: {
+        // 医院验收入库：链上 confirmReceipt，资产入医院仓库
+        const acceptedItems = await OrderItem.findAll({ where: { orderId } });
+        const acceptErrors: string[] = [];
+
+        for (const item of acceptedItems) {
+          if (!item.udi) continue;
+
+          let chainSuccess = false;
+
+          try {
+            // 经销商已经 transfer 给医院，资产状态应该是 IN_TRANSIT
+            this.assetService.setContext('hospital', '1');
+            const assetResult = await this.assetService.queryAsset(item.udi);
+
+            if (!assetResult.success || !assetResult.data) {
+              acceptErrors.push(`${item.udi}: 资产不存在`);
+              continue;
+            }
+
+            const currentAssetStatus = (assetResult.data as any).status;
+
+            if (currentAssetStatus === 'IN_STOCK') {
+              chainSuccess = true;
+            } else if (currentAssetStatus === 'IN_TRANSIT') {
               await this.assetService.confirmReceipt({
                 udi: item.udi,
                 receiverName: 'hospital',
               });
               chainSuccess = true;
             } else {
-              errors.push(`${item.udi}: 状态 ${currentAssetStatus} 无法入库`);
+              acceptErrors.push(`${item.udi}: 状态 ${currentAssetStatus} 无法入库`);
               continue;
             }
           } catch (err: any) {
-            errors.push(`${item.udi}: ${err.message}`);
+            acceptErrors.push(`${item.udi}: ${err.message}`);
           }
 
-          // 只有链上操作成功才更新订单项状态
           if (chainSuccess) {
             await OrderItem.update(
               { deliveryStatus: 'DELIVERED' },
@@ -354,8 +439,8 @@ export class OrderService {
           }
         }
 
-        if (errors.length > 0) {
-          console.warn(`订单 ${order.orderNumber} 部分资产入库失败:`, errors);
+        if (acceptErrors.length > 0) {
+          console.warn(`订单 ${order.orderNumber} 部分资产入库失败:`, acceptErrors);
         }
         break;
       }

@@ -77,6 +77,15 @@ const routes: RouteRecordRaw[] = [
             },
           },
           {
+            path: 'warehouse',
+            name: 'ProducerWarehouse',
+            component: () => import('@/views/producer/Warehouse.vue'),
+            meta: {
+              title: '仓储清单',
+              icon: 'Grid',
+            },
+          },
+          {
             path: 'orders',
             name: 'ProducerOrders',
             component: () => import('@/views/producer/OrderManage.vue'),
@@ -181,6 +190,16 @@ const routes: RouteRecordRaw[] = [
             meta: {
               title: '临床核销',
               icon: 'Finished',
+              permission: 'hospital_consume',
+            },
+          },
+          {
+            path: 'consumption',
+            name: 'Consumption',
+            component: () => import('@/views/hospital/Consumption.vue'),
+            meta: {
+              title: '消耗记录',
+              icon: 'List',
               permission: 'hospital_consume',
             },
           },

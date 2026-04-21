@@ -49,6 +49,9 @@
               {{ getStatusText(assetInfo.status) }}
             </el-tag>
           </el-descriptions-item>
+          <el-descriptions-item label="库存数量">
+            {{ assetInfo.quantity || 1 }} 个
+          </el-descriptions-item>
         </el-descriptions>
 
         <el-form
@@ -60,14 +63,8 @@
         >
           <el-row :gutter="20">
             <el-col :span="12">
-              <el-form-item label="使用科室" prop="department">
-                <el-select v-model="form.department" placeholder="选择科室" style="width: 100%">
-                  <el-option label="手术室" value="手术室" />
-                  <el-option label="内科" value="内科" />
-                  <el-option label="外科" value="外科" />
-                  <el-option label="骨科" value="骨科" />
-                  <el-option label="心内科" value="心内科" />
-                </el-select>
+              <el-form-item label="核销数量" prop="consumeQuantity">
+                <el-input-number v-model="form.consumeQuantity" :min="1" :max="assetInfo.quantity || 1" style="width: 100%" />
               </el-form-item>
             </el-col>
             <el-col :span="12">
@@ -79,10 +76,29 @@
 
           <el-row :gutter="20">
             <el-col :span="12">
+              <el-form-item label="使用科室" prop="department">
+                <el-select v-model="form.department" placeholder="选择科室" style="width: 100%">
+                  <el-option label="手术室" value="手术室" />
+                  <el-option label="内科" value="内科" />
+                  <el-option label="外科" value="外科" />
+                  <el-option label="骨科" value="骨科" />
+                  <el-option label="心内科" value="心内科" />
+                  <el-option label="神经内科" value="神经内科" />
+                  <el-option label="急诊科" value="急诊科" />
+                  <el-option label="ICU" value="ICU" />
+                  <el-option label="妇产科" value="妇产科" />
+                  <el-option label="儿科" value="儿科" />
+                </el-select>
+              </el-form-item>
+            </el-col>
+            <el-col :span="12">
               <el-form-item label="手术ID">
                 <el-input v-model="form.surgeryId" placeholder="关联手术ID（脱敏）" />
               </el-form-item>
             </el-col>
+          </el-row>
+
+          <el-row :gutter="20">
             <el-col :span="12">
               <el-form-item label="备注">
                 <el-input v-model="form.remarks" placeholder="备注信息" />
@@ -128,6 +144,7 @@ const form = reactive({
   operator: '',
   surgeryId: '',
   remarks: '',
+  consumeQuantity: 1,
 })
 
 const rules: FormRules = {
@@ -218,11 +235,12 @@ const handleSubmit = async () => {
       const user = JSON.parse(localStorage.getItem('user') || '{}')
       const res = await hospitalApi.consume({
         udi: assetInfo.value.udi,
-        hospital: user.name || '医院',
+        hospital: user.orgName || 'hospital',
         department: form.department,
         surgeryId: form.surgeryId,
         operator: form.operator,
         remarks: form.remarks,
+        consumeQuantity: form.consumeQuantity,
       }) as any
 
       if (res.success) {

@@ -18,6 +18,7 @@ export enum OrderStatus {
   READY_TO_SHIP = 'READY_TO_SHIP',
   IN_TRANSIT = 'IN_TRANSIT',
   DELIVERED = 'DELIVERED',
+  DISTRIBUTOR_SHIPPING = 'DISTRIBUTOR_SHIPPING',
   ACCEPTED = 'ACCEPTED',
   COMPLETED = 'COMPLETED',
   CANCELLED = 'CANCELLED',
@@ -38,6 +39,7 @@ export interface OrderAttributes {
   expectedDeliveryDate?: string;
   actualDeliveryDate?: string;
   shippingId?: string;
+  distributorShippingId?: string;
   totalAmount?: number;
   remarks?: string;
   rejectReason?: string;
@@ -69,6 +71,7 @@ export class Order
   public expectedDeliveryDate?: string;
   public actualDeliveryDate?: string;
   public shippingId?: string;
+  public distributorShippingId?: string;
   public totalAmount?: number;
   public remarks?: string;
   public rejectReason?: string;
@@ -134,6 +137,10 @@ Order.init(
       allowNull: true,
     },
     shippingId: {
+      type: DataTypes.STRING(50),
+      allowNull: true,
+    },
+    distributorShippingId: {
       type: DataTypes.STRING(50),
       allowNull: true,
     },

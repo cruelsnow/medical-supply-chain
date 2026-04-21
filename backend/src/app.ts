@@ -141,8 +141,10 @@ async function start() {
     // 2. 初始化默认用户
     await initUsers();
 
-    // 3. 初始化模拟订单和告警数据
-    await mockOrderService.initMockData();
+    // 3. 初始化模拟订单和告警数据（设置 SKIP_MOCK_DATA=true 跳过）
+    if (process.env.SKIP_MOCK_DATA !== 'true') {
+      await mockOrderService.initMockData();
+    }
 
     // 4. 启动HTTP服务
     server.listen(PORT, HOST, () => {

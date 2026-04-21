@@ -21,6 +21,32 @@ const useMockMode = (): boolean => {
   return false;
 };
 
+/**
+ * 将链上 UTC 时间转换为北京时间（UTC+8）
+ * 链码运行在 Docker 容器中，默认时区为 UTC
+ */
+const TIME_FIELDS = ['createdAt', 'updatedAt', 'consumedAt', 'verifiedAt'] as const;
+
+function convertUTCToLocal(data: any): any {
+  if (!data || typeof data !== 'object') return data;
+
+  if (Array.isArray(data)) {
+    return data.map(item => convertUTCToLocal(item));
+  }
+
+  const result = { ...data };
+  for (const field of TIME_FIELDS) {
+    if (result[field] && typeof result[field] === 'string') {
+      const utcDate = new Date(result[field] + 'Z');
+      if (!isNaN(utcDate.getTime())) {
+        const pad = (n: number) => String(n).padStart(2, '0');
+        result[field] = `${utcDate.getFullYear()}-${pad(utcDate.getMonth() + 1)}-${pad(utcDate.getDate())} ${pad(utcDate.getHours())}:${pad(utcDate.getMinutes())}:${pad(utcDate.getSeconds())}`;
+      }
+    }
+  }
+  return result;
+}
+
 // =============================================================================
 // 类型定义
 // =============================================================================
@@ -98,6 +124,7 @@ export interface BurnParams {
   surgeryId?: string;
   operator: string;
   remarks?: string;
+  consumeQuantity?: number;
 }
 
 // 服务响应接口
@@ -158,6 +185,11 @@ export class AssetService {
         result = await fabricService.submitTransaction(contract, functionName, ...args);
       } else {
         result = await fabricService.evaluateTransaction(contract, functionName, ...args);
+      }
+
+      // 将链上 UTC 时间转换为本地时间
+      if (result.data) {
+        result.data = convertUTCToLocal(result.data);
       }
 
       return result;
@@ -249,6 +281,7 @@ export class AssetService {
           surgeryId: args[3],
           operator: args[4],
           remarks: args[5],
+          consumeQuantity: parseInt(args[6], 10) || 1,
         });
 
       case 'RecallAsset':
@@ -259,6 +292,9 @@ export class AssetService {
 
       case 'QueryExpiringSoon':
         return mockService.queryExpiringSoon(parseInt(args[0], 10));
+
+      case 'QueryConsumeRecords':
+        return mockService.queryConsumeRecords(args[0]);
 
       default:
         console.warn(`[模拟模式] 未知函数: ${functionName}，返回空数据`);
@@ -337,6 +373,7 @@ export class AssetService {
       params.surgeryId || '',
       params.operator,
       params.remarks || '',
+      String(params.consumeQuantity || 1),
     ];
 
     return this.executeContract('submit', 'BurnAsset', ...args);
@@ -469,6 +506,13 @@ export class AssetService {
   // =========================================================================
   public async getAssetCount(): Promise<ServiceResponse> {
     return this.executeContract('evaluate', 'GetAssetCount');
+  }
+
+  // =========================================================================
+  // 查询消耗记录
+  // =========================================================================
+  public async queryConsumeRecords(owner: string): Promise<ServiceResponse> {
+    return this.executeContract('evaluate', 'QueryConsumeRecords', owner);
   }
 }
 

@@ -9,12 +9,13 @@ import { config } from '../config';
 // =============================================================================
 // 模拟资产数据
 // =============================================================================
-const mockAssets = [
+const mockAssets: any[] = [
   {
     udi: 'UDI20240328001',
     name: '一次性医用口罩',
     specification: '10只/盒',
     batchNumber: 'B20240328',
+    quantity: 100,
     productionDate: '2024-03-28',
     expiryDate: '2026-03-28',
     docHash: 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2',
@@ -30,6 +31,7 @@ const mockAssets = [
     name: '医用外科手套',
     specification: '100只/盒',
     batchNumber: 'B20240329',
+    quantity: 50,
     productionDate: '2024-03-29',
     expiryDate: '2027-03-29',
     docHash: 'b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3',
@@ -45,6 +47,7 @@ const mockAssets = [
     name: '一次性注射器',
     specification: '5ml/支',
     batchNumber: 'B20240330',
+    quantity: 200,
     productionDate: '2024-03-30',
     expiryDate: '2026-09-30',
     docHash: 'c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4',
@@ -60,6 +63,7 @@ const mockAssets = [
     name: '医用敷料',
     specification: '10cm×10cm',
     batchNumber: 'B20240325',
+    quantity: 0,
     productionDate: '2024-03-25',
     expiryDate: '2025-03-25',
     docHash: 'd4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5',
@@ -75,6 +79,7 @@ const mockAssets = [
     name: '输液器',
     specification: '标准型',
     batchNumber: 'B20240327',
+    quantity: 80,
     productionDate: '2024-03-27',
     expiryDate: '2026-03-27',
     docHash: 'e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6',
@@ -84,6 +89,36 @@ const mockAssets = [
     producerMSP: 'ProducerMSP',
     createdAt: '2024-03-27T11:00:00Z',
     updatedAt: '2024-03-29T13:00:00Z',
+  },
+];
+
+// =============================================================================
+// 模拟消耗记录
+// =============================================================================
+const mockConsumeRecords: any[] = [
+  {
+    udi: 'UDI20240328004',
+    hospital: '医院',
+    department: '手术室',
+    surgeryId: '',
+    operator: '李医生',
+    consumedAt: '2024-04-01 16:00:00',
+    txID: 'mock_tx_001',
+    remarks: '',
+    consumedQuantity: 10,
+    remainingQuantity: 0,
+  },
+  {
+    udi: 'UDI20240328001',
+    hospital: '医院',
+    department: '内科',
+    surgeryId: '',
+    operator: '王医生',
+    consumedAt: '2024-04-05 10:30:00',
+    txID: 'mock_tx_002',
+    remarks: '常规消耗',
+    consumedQuantity: 20,
+    remainingQuantity: 80,
   },
 ];
 
@@ -299,8 +334,16 @@ export class MockService {
     if (assetIndex === -1) {
       return { success: false, error: '资产不存在' };
     }
-    mockAssets[assetIndex].status = 'CONSUMED';
-    mockAssets[assetIndex].updatedAt = new Date().toISOString();
+    const qty = params.consumeQuantity || 1;
+    const asset = mockAssets[assetIndex];
+    if (qty > asset.quantity) {
+      return { success: false, error: `消耗数量(${qty})超过库存(${asset.quantity})` };
+    }
+    asset.quantity -= qty;
+    if (asset.quantity === 0) {
+      asset.status = 'CONSUMED';
+    }
+    asset.updatedAt = new Date().toISOString();
 
     if (!mockHistory[params.udi]) {
       mockHistory[params.udi] = [];
@@ -308,13 +351,28 @@ export class MockService {
     mockHistory[params.udi].push({
       txId: `tx_${Date.now()}`,
       timestamp: new Date().toISOString(),
-      status: 'CONSUMED',
+      status: asset.quantity === 0 ? 'CONSUMED' : 'IN_STOCK',
       owner: params.hospital,
-      action: `临床核销 - ${params.department}`,
+      action: `临床核销 - ${params.department} (消耗${qty}个, 剩余${asset.quantity}个)`,
       mspId: 'HospitalMSP',
     });
 
-    return { success: true, data: mockAssets[assetIndex], txId: `mock_tx_${Date.now()}` };
+    // 同时保存消耗记录
+    const now = new Date();
+    mockConsumeRecords.push({
+      udi: params.udi,
+      hospital: params.hospital,
+      department: params.department,
+      surgeryId: params.surgeryId || '',
+      operator: params.operator,
+      consumedAt: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`,
+      txID: `mock_tx_${Date.now()}`,
+      remarks: params.remarks || '',
+      consumedQuantity: qty,
+      remainingQuantity: asset.quantity,
+    });
+
+    return { success: true, data: { ...asset, consumedQuantity: qty, remainingQuantity: asset.quantity }, txId: `mock_tx_${Date.now()}` };
   }
 
   /**
@@ -427,6 +485,15 @@ export class MockService {
     });
 
     return { success: true, data: mockAssets[assetIndex], txId: `mock_tx_${Date.now()}` };
+  }
+
+  /**
+   * 查询消耗记录
+   */
+  public async queryConsumeRecords(owner: string): Promise<{ success: boolean; data?: any[]; error?: string }> {
+    await this.simulateDelay();
+    const records = mockConsumeRecords.filter(r => !owner || r.hospital === owner);
+    return { success: true, data: records };
   }
 }
 

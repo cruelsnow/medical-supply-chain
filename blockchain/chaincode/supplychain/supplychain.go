@@ -96,14 +96,16 @@ type EnvDataRecord struct {
 // ConsumeRecord 消耗记录
 // 描述: 记录临床消耗信息
 type ConsumeRecord struct {
-	UDI           string `json:"udi"`           // 资产UDI
-	Hospital      string `json:"hospital"`      // 使用医院
-	Department    string `json:"department"`    // 使用科室
-	SurgeryID     string `json:"surgeryId"`     // 手术ID (脱敏)
-	Operator      string `json:"operator"`      // 操作者
-	ConsumedAt    string `json:"consumedAt"`    // 消耗时间
-	TxID          string `json:"txID"`          // 交易ID
-	Remarks       string `json:"remarks"`       // 备注
+	UDI               string `json:"udi"`               // 资产UDI
+	Hospital          string `json:"hospital"`          // 使用医院
+	Department        string `json:"department"`        // 使用科室
+	SurgeryID         string `json:"surgeryId"`         // 手术ID (脱敏)
+	Operator          string `json:"operator"`          // 操作者
+	ConsumedAt        string `json:"consumedAt"`        // 消耗时间
+	TxID              string `json:"txID"`              // 交易ID
+	Remarks           string `json:"remarks"`           // 备注
+	ConsumedQuantity  int    `json:"consumedQuantity"`  // 本次消耗数量
+	RemainingQuantity int    `json:"remainingQuantity"` // 剩余数量
 }
 
 // AssetHistory 资产历史记录
@@ -256,12 +258,6 @@ func (s *SupplyChainContract) InitAsset(
 		return nil, fmt.Errorf("only ProducerMSP can initialize assets, current MSP: %s", mspID)
 	}
 
-	// 验证数量参数
-	qty, err := strconv.Atoi(quantity)
-	if err != nil || qty < 1 {
-		return nil, fmt.Errorf("invalid quantity: %s, must be a positive integer", quantity)
-	}
-
 	// 检查资产是否已存在
 	exists, err := assetExists(ctx, udi)
 	if err != nil {
@@ -278,6 +274,11 @@ func (s *SupplyChainContract) InitAsset(
 	}
 
 	// 创建资产
+	qty, err := strconv.Atoi(quantity)
+	if err != nil || qty < 1 {
+		return nil, fmt.Errorf("invalid quantity: %s, must be a positive integer", quantity)
+	}
+
 	asset := &MedicalAsset{
 		UDI:            udi,
 		Name:           name,
@@ -561,7 +562,7 @@ func (s *SupplyChainContract) UpdateEnvData(
 // 核心业务方法 - 消耗核销
 // =============================================================================
 
-// BurnAsset 消耗核销（临床消耗）
+// BurnAsset 消耗核销（支持部分核销）
 // 参数:
 //   - udi: 资产UDI
 //   - hospital: 医院名称
@@ -569,6 +570,7 @@ func (s *SupplyChainContract) UpdateEnvData(
 //   - surgeryId: 手术ID（脱敏）
 //   - operator: 操作者
 //   - remarks: 备注
+//   - consumeQuantity: 本次消耗数量
 // 返回: 消耗记录
 func (s *SupplyChainContract) BurnAsset(
 	ctx contractapi.TransactionContextInterface,
@@ -578,6 +580,7 @@ func (s *SupplyChainContract) BurnAsset(
 	surgeryId string,
 	operator string,
 	remarks string,
+	consumeQuantity string,
 ) (*ConsumeRecord, error) {
 	// 获取资产
 	asset, err := getAsset(ctx, udi)
@@ -601,9 +604,15 @@ func (s *SupplyChainContract) BurnAsset(
 		return nil, fmt.Errorf("asset must be in stock to burn, current status: %s", asset.Status)
 	}
 
-	// 验证资产未被消耗
-	if asset.Status == StatusConsumed {
-		return nil, fmt.Errorf("asset has already been consumed")
+	// 解析消耗数量
+	qty, err := strconv.Atoi(consumeQuantity)
+	if err != nil || qty <= 0 {
+		return nil, fmt.Errorf("consumeQuantity must be a positive integer, got: %s", consumeQuantity)
+	}
+
+	// 验证消耗数量不超过库存
+	if qty > asset.Quantity {
+		return nil, fmt.Errorf("consume quantity (%d) exceeds available quantity (%d)", qty, asset.Quantity)
 	}
 
 	// 获取时间戳
@@ -613,8 +622,15 @@ func (s *SupplyChainContract) BurnAsset(
 	}
 	txID := getTxID(ctx)
 
-	// 更新资产状态为已消耗
-	asset.Status = StatusConsumed
+	// 扣减数量
+	remainingQuantity := asset.Quantity - qty
+	asset.Quantity = remainingQuantity
+
+	// 数量为0时状态变为已消耗，否则保持IN_STOCK
+	if remainingQuantity == 0 {
+		asset.Status = StatusConsumed
+	}
+
 	asset.UpdatedAt = timestamp
 	asset.TxID = txID
 
@@ -626,14 +642,16 @@ func (s *SupplyChainContract) BurnAsset(
 
 	// 创建消耗记录
 	consumeRecord := &ConsumeRecord{
-		UDI:        udi,
-		Hospital:   hospital,
-		Department: department,
-		SurgeryID:  surgeryId,
-		Operator:   operator,
-		ConsumedAt: timestamp,
-		TxID:       txID,
-		Remarks:    remarks,
+		UDI:               udi,
+		Hospital:          hospital,
+		Department:        department,
+		SurgeryID:         surgeryId,
+		Operator:          operator,
+		ConsumedAt:        timestamp,
+		TxID:              txID,
+		Remarks:           remarks,
+		ConsumedQuantity:  qty,
+		RemainingQuantity: remainingQuantity,
 	}
 
 	// 保存消耗记录
@@ -940,6 +958,39 @@ func (s *SupplyChainContract) GetAssetCount(
 	}
 
 	return counts, nil
+}
+
+// QueryConsumeRecords 查询消耗记录
+// 参数: owner (可选，按所有者过滤)
+func (s *SupplyChainContract) QueryConsumeRecords(ctx contractapi.TransactionContextInterface, owner string) ([]*ConsumeRecord, error) {
+	resultsIterator, err := ctx.GetStub().GetStateByRange("CONSUME_", "CONSUME_~")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get consume records: %v", err)
+	}
+	defer resultsIterator.Close()
+
+	var records []*ConsumeRecord
+	for resultsIterator.HasNext() {
+		queryResponse, err := resultsIterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate consume records: %v", err)
+		}
+
+		var record ConsumeRecord
+		err = json.Unmarshal(queryResponse.Value, &record)
+		if err != nil {
+			continue
+		}
+
+		// 如果指定了 owner，按医院过滤
+		if owner != "" && record.Hospital != owner {
+			continue
+		}
+
+		records = append(records, &record)
+	}
+
+	return records, nil
 }
 
 // =============================================================================

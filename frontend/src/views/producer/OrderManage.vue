@@ -26,7 +26,6 @@
       </el-row>
 
       <el-table :data="orders" v-loading="loading" stripe style="width: 100%">
-        <el-table-column prop="orderNumber" label="订单编号" width="180" />
         <el-table-column prop="title" label="订单标题" min-width="200" />
         <el-table-column prop="hospitalName" label="医院" width="120" />
         <el-table-column prop="distributorName" label="经销商" width="120" />

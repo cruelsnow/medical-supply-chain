@@ -233,6 +233,7 @@ export const hospitalApi = {
     surgeryId?: string
     operator: string
     remarks?: string
+    consumeQuantity?: number
   }) => request.post('/hospital/consume', data),
 
   // 效期预警
@@ -311,6 +312,10 @@ export const orderApi = {
 
   // 确认送达
   deliver: (id: string) => request.put(`/order/${id}/deliver`),
+
+  // 经销商发货给医院
+  distributorDispatch: (id: string, data: { distributorShippingId: string }) =>
+    request.put(`/order/${id}/distributor-dispatch`, data),
 
   // 医院验收
   accept: (id: string) => request.put(`/order/${id}/accept`),

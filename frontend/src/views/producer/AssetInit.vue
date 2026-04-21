@@ -163,7 +163,7 @@ const form = reactive({
   productionDate: '',
   expiryDate: '',
   docHash: '',
-  producer: 'ProducerMSP',
+  producer: 'producer',
   remarks: '',
 })
 

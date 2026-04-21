@@ -103,7 +103,7 @@
                   link
                   @click="handleConfirmDelivery(row)"
                 >
-                  确认送达
+                  确认收货
                 </el-button>
               </template>
             </el-table-column>
@@ -148,6 +148,7 @@
               >
                 <el-option label="待发货" value="READY_TO_SHIP" />
                 <el-option label="运输中" value="IN_TRANSIT" />
+                <el-option label="已收货" value="DELIVERED" />
               </el-select>
             </el-form-item>
             <el-form-item>
@@ -174,7 +175,7 @@
             <el-table-column prop="createdAt" label="创建时间" width="170">
               <template #default="{ row }">{{ formatDate(row.createdAt) }}</template>
             </el-table-column>
-            <el-table-column label="操作" width="240" fixed="right">
+            <el-table-column label="操作" width="300" fixed="right">
               <template #default="{ row }">
                 <el-button type="primary" link @click="openDetailDrawer(row)">
                   查看详情
@@ -186,6 +187,14 @@
                   @click="openDispatchDialog(row)"
                 >
                   发货
+                </el-button>
+                <el-button
+                  v-if="canWrite && row.status === 'DELIVERED'"
+                  type="success"
+                  link
+                  @click="openDistributorShipDialog(row)"
+                >
+                  发货给医院
                 </el-button>
               </template>
             </el-table-column>
@@ -228,7 +237,6 @@
 
         <el-card class="table-card">
           <el-table :data="filteredInventoryItems" v-loading="inventoryLoading" stripe>
-            <el-table-column prop="orderNumber" label="订单编号" width="180" />
             <el-table-column prop="itemName" label="物资名称" min-width="180" />
             <el-table-column prop="specification" label="规格" width="120">
               <template #default="{ row }">{{ row.specification || '-' }}</template>
@@ -238,25 +246,12 @@
             </el-table-column>
             <el-table-column prop="quantity" label="数量" width="80" />
             <el-table-column prop="deliveryStatus" label="状态" width="100">
-              <template #default="{ row }">
-                <el-tag :type="deliveryStatusColor(row.deliveryStatus)">
-                  {{ deliveryStatusLabel(row.deliveryStatus) }}
-                </el-tag>
+              <template #default>
+                <el-tag type="success">在库</el-tag>
               </template>
             </el-table-column>
             <el-table-column prop="deliveredAt" label="入库时间" width="170">
               <template #default="{ row }">{{ formatDate(row.deliveredAt) }}</template>
-            </el-table-column>
-            <el-table-column label="操作" width="100" fixed="right">
-              <template #default="{ row }">
-                <el-button
-                  type="primary"
-                  link
-                  @click="openDetailDrawerByOrder(row.orderId)"
-                >
-                  查看订单
-                </el-button>
-              </template>
             </el-table-column>
           </el-table>
 
@@ -344,6 +339,34 @@
       <template #footer>
         <el-button @click="dispatchDialogVisible = false">取消</el-button>
         <el-button type="primary" :loading="submitting" @click="handleDispatch">
+          确认发货
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- ================================================================= -->
+    <!-- 经销商发货给医院对话框                                                    -->
+    <!-- ================================================================= -->
+    <el-dialog
+      v-model="distShipDialogVisible"
+      title="发货给医院"
+      width="500px"
+      :close-on-click-modal="false"
+    >
+      <el-form label-width="100px">
+        <el-form-item label="订单编号">
+          <el-input :model-value="currentOrder?.orderNumber" disabled />
+        </el-form-item>
+        <el-form-item label="运输单号" required>
+          <el-input
+            v-model="distShipForm.shippingId"
+            placeholder="请输入运输单号，如 EMS9876543210"
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="distShipDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="submitting" @click="handleDistributorShip">
           确认发货
         </el-button>
       </template>
@@ -449,7 +472,7 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { orderApi } from '@/api'
+import { orderApi, assetApi } from '@/api'
 import { usePermission } from '@/composables/usePermission'
 import { formatTime } from '@/utils'
 
@@ -467,7 +490,8 @@ const STATUS_LABEL_MAP: Record<string, string> = {
   PRODUCING: '生产中',
   READY_TO_SHIP: '待发货',
   IN_TRANSIT: '运输中',
-  DELIVERED: '已送达',
+  DELIVERED: '已收货',
+  DISTRIBUTOR_SHIPPING: '发货中',
   ACCEPTED: '已验收',
   COMPLETED: '已完成',
   CANCELLED: '已取消',
@@ -481,6 +505,7 @@ const STATUS_COLOR_MAP: Record<string, 'info' | 'success' | 'warning' | 'danger'
   READY_TO_SHIP: 'warning',
   IN_TRANSIT: 'warning',
   DELIVERED: 'success',
+  DISTRIBUTOR_SHIPPING: 'primary',
   ACCEPTED: 'success',
   COMPLETED: 'success',
   CANCELLED: 'info',
@@ -490,12 +515,16 @@ const STATUS_COLOR_MAP: Record<string, 'info' | 'success' | 'warning' | 'danger'
 const DELIVERY_STATUS_LABEL_MAP: Record<string, string> = {
   PENDING: '待发货',
   SHIPPED: '已发货',
+  RECEIVED: '已收货',
+  DISTRIBUTOR_SHIPPED: '已转发',
   DELIVERED: '已送达',
 }
 
 const DELIVERY_STATUS_COLOR_MAP: Record<string, 'info' | 'warning' | 'success'> = {
   PENDING: 'info',
   SHIPPED: 'warning',
+  RECEIVED: 'success',
+  DISTRIBUTOR_SHIPPED: 'warning',
   DELIVERED: 'success',
 }
 
@@ -599,10 +628,10 @@ const handleConfirmOrder = async (row: any) => {
 
 const handleConfirmDelivery = async (row: any) => {
   try {
-    await ElMessageBox.confirm('确认已送达？', '确认送达')
+    await ElMessageBox.confirm('确认收货？资产将入经销商仓库', '确认收货')
     const res = await orderApi.deliver(row.id) as any
     if (res.success) {
-      ElMessage.success('已确认送达')
+      ElMessage.success('已确认收货')
       loadPendingOrders()
     }
   } catch (error: any) {
@@ -675,9 +704,9 @@ const loadShippingOrders = async () => {
 
     if (res.success) {
       const allOrders = res.data?.list || []
-      // Filter to only show READY_TO_SHIP and IN_TRANSIT orders
+      // Filter to show READY_TO_SHIP, IN_TRANSIT and DELIVERED orders
       shippingOrders.value = allOrders.filter(
-        (order: any) => order.status === 'READY_TO_SHIP' || order.status === 'IN_TRANSIT'
+        (order: any) => order.status === 'READY_TO_SHIP' || order.status === 'IN_TRANSIT' || order.status === 'DELIVERED'
       )
       shippingPagination.total = res.data?.total || 0
     }
@@ -757,6 +786,43 @@ const handleDispatch = async () => {
 }
 
 // =============================================================================
+// 经销商发货给医院
+// =============================================================================
+const distShipDialogVisible = ref(false)
+const distShipForm = reactive({
+  shippingId: '',
+})
+
+const openDistributorShipDialog = (row: any) => {
+  currentOrder.value = row
+  distShipForm.shippingId = ''
+  distShipDialogVisible.value = true
+}
+
+const handleDistributorShip = async () => {
+  if (!distShipForm.shippingId.trim()) {
+    ElMessage.warning('请输入运输单号')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const res = await orderApi.distributorDispatch(currentOrder.value.id, {
+      distributorShippingId: distShipForm.shippingId,
+    }) as any
+    if (res.success) {
+      ElMessage.success('已发货给医院')
+      distShipDialogVisible.value = false
+      loadShippingOrders()
+    }
+  } catch (error: any) {
+    ElMessage.error(error.message || '发货失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// =============================================================================
 // Tab 3 - 仓储清单
 // =============================================================================
 const inventoryLoading = ref(false)
@@ -790,39 +856,25 @@ const filteredInventoryItems = computed(() => {
 const loadInventoryItems = async () => {
   inventoryLoading.value = true
   try {
-    // Fetch all delivered orders to build inventory
-    const res = await orderApi.list({
-      status: 'DELIVERED',
-      page: 1,
-      pageSize: 100,
-    }) as any
+    // 从链上查询 owner=distributor 且 status=IN_STOCK 的资产
+    const res = await assetApi.byOwner('distributor') as any
 
     if (res.success) {
-      const orders = res.data?.list || []
-      const items: any[] = []
+      const assets = (res.data || []).filter(
+        (a: any) => a.status === 'IN_STOCK' && a.name && a.name.trim() !== ''
+      )
 
-      for (const order of orders) {
-        if (order.items && Array.isArray(order.items)) {
-          for (const item of order.items) {
-            if (item.deliveryStatus === 'DELIVERED') {
-              items.push({
-                orderId: order.id,
-                orderNumber: order.orderNumber,
-                itemId: item.id || item.itemId,
-                itemName: item.itemName || item.name || '-',
-                specification: item.specification || '',
-                udi: item.udi || '',
-                quantity: item.quantity || 0,
-                deliveryStatus: item.deliveryStatus,
-                deliveredAt: item.deliveredAt || order.updatedAt || order.createdAt,
-              })
-            }
-          }
-        }
-      }
+      const items = assets.map((a: any) => ({
+        orderNumber: '-',
+        itemName: a.name || '-',
+        specification: a.specification || '-',
+        udi: a.udi,
+        quantity: a.quantity || 1,
+        deliveryStatus: 'RECEIVED',
+        deliveredAt: a.updatedAt || a.createdAt,
+      }))
 
-      // Sort by delivery time descending
-      items.sort((a, b) => {
+      items.sort((a: any, b: any) => {
         const timeA = new Date(a.deliveredAt || 0).getTime()
         const timeB = new Date(b.deliveredAt || 0).getTime()
         return timeB - timeA

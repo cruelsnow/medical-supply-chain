@@ -55,6 +55,7 @@ export const burnSchema = Joi.object({
   surgeryId: Joi.string().allow('').max(50).description('手术ID'),
   operator: Joi.string().required().max(100).description('操作者'),
   remarks: Joi.string().allow('').max(500).description('备注'),
+  consumeQuantity: Joi.number().integer().min(1).default(1).description('消耗数量'),
 });
 
 // 哈希验证模式
